@@ -44,7 +44,7 @@ class NotificationService:
         "blue": "#0098B1",
         "gray": "#D9D9D9",
         "purple": "#A73493",
-        "company": "Quátas Compañia de Seguros Colombia S.A",
+        "company": "Quálitas Compañía de Seguros Colombia S.A.",
         "app_name": "Sistema de Gestión de Inventarios",
         "logo_cid": "qualitas_logo",
     }
@@ -520,12 +520,6 @@ class NotificationService:
         base_url
     ):
         try:
-            # En producción, si base_url viene vacío, usamos APP_BASE_URL
-            base_url = (base_url or os.getenv("APP_BASE_URL", "")).strip().rstrip("/")
-            if not base_url:
-                logger.error("APP_BASE_URL/base_url no configurado; no se puede construir el link de confirmación")
-                return False
-
             if not destinatario_email:
                 logger.error("Email del destinatario es requerido")
                 return False

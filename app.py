@@ -718,7 +718,7 @@ def dashboard():
         materiales = MaterialModel.obtener_todos(oficina_id) or []
         oficinas = OficinaModel.obtener_todas() or []
         solicitudes = SolicitudModel.obtener_todas(oficina_id) or []
-        aprobadores = UsuarioModel.obtener_aprobadores() or []
+        aprobadores = UsuarioModel.obtener_aprobadores_desde_tabla() or []
         
         return render_template('dashboard.html',
             materiales=materiales,

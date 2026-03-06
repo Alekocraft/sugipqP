@@ -1,141 +1,1342 @@
 {% extends "base.html" %}
-{% block title %}Lista de Solicitudes{% endblock %}
+{% block title %}Gestión de Solicitudes{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
+    <h1>Solicitudes de Materiales</h1>
+
+    <!-- Filtros -->
     <div class="row mb-3">
         <div class="col-md-12">
-            <a href="/dashboard" class="btn btn-secondary">
-                ← Volver al Dashboard
-            </a>
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="estado" class="form-label">Filtrar por estado:</label>
+                            <select name="estado" id="estado" class="form-select">
+                                <option value="todos" {% if filtro_estado=='todos' %}selected{% endif %}>Todos</option>
+                                <option value="Pendiente" {% if filtro_estado=='Pendiente' %}selected{% endif %}>Pendiente</option>
+                                <option value="Aprobada" {% if filtro_estado=='Aprobada' %}selected{% endif %}>Aprobada</option>
+                                <option value="Rechazada" {% if filtro_estado=='Rechazada' %}selected{% endif %}>Rechazada</option>
+                                <option value="Entregada Parcial" {% if filtro_estado=='Entregada Parcial' %}selected{% endif %}>Entregada Parcial</option>
+                                <option value="Completada" {% if filtro_estado=='Completada' %}selected{% endif %}>Completada</option>
+                                <option value="Devuelta" {% if filtro_estado=='Devuelta' %}selected{% endif %}>Devuelta</option>
+                                <!-- Estados de novedad con nombres exactos como están en la BD -->
+                                <option value="Novedad Registrada" {% if filtro_estado=='Novedad Registrada' %}selected{% endif %}>Novedad Registrada</option>
+                                <option value="Novedad Aceptada" {% if filtro_estado=='Novedad Aceptada' %}selected{% endif %}>Novedad Aceptada</option>
+                                <option value="Novedad Rechazada" {% if filtro_estado=='Novedad Rechazada' %}selected{% endif %}>Novedad Rechazada</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="oficina" class="form-label">Filtrar por oficina:</label>
+                            <select name="oficina" id="oficina" class="form-select">
+                                <option value="todas" {% if filtro_oficina=='todas' %}selected{% endif %}>Todas</option>
+                                {% for oficina in oficinas_unique %}
+                                <option value="{{ oficina }}" {% if filtro_oficina==oficina %}selected{% endif %}>{{ oficina }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="material" class="form-label">Material:</label>
+                            <input type="text" class="form-control" id="material" name="material" 
+                                   value="{{ request.args.get('material', '') }}" placeholder="Buscar material...">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="solicitante" class="form-label">Solicitante:</label>
+                            <input type="text" class="form-control" id="solicitante" name="solicitante" 
+                                   value="{{ request.args.get('solicitante', '') }}" placeholder="Buscar solicitante...">
+                        </div>
+
+                        <div class="col-md-12 mt-2">
+                            <button type="submit" class="btn btn-primary me-2">
+                                Filtrar
+                            </button>
+                            <a href="/solicitudes" class="btn btn-secondary me-2">
+                                Limpiar
+                            </a>
+
+                            {% if can_access('reportes', 'view_all') %}
+                            <a href="/reportes/solicitudes/exportar/excel?estado={{ filtro_estado }}&oficina={{ filtro_oficina }}&material={{ request.args.get('material', '') }}&solicitante={{ request.args.get('solicitante', '') }}"
+                               class="btn btn-success">
+                                Exportar a Excel
+                            </a>
+                            {% endif %}
+
+                            {% if can_access('solicitudes', 'create') %}
+                            <a href="/solicitudes/crear" class="btn btn-light float-end">
+                                ➕ Nueva Solicitud
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
-    <h1>📋 Lista de Solicitudes</h1>
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Resumen de Estados</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2">
+                            <div class="card bg-light clickable-card" onclick="filtrarPorEstado('todos')">
+                                <div class="card-body">
+                                    <h6>Total</h6>
+                                    <h4 class="text-primary">{{ total_solicitudes }}</h4>
+                                </div>
+                            </div>
+                        </div>
 
-    <div class="card">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                📝 Lista de Solicitudes
-                <span class="badge bg-light text-dark">{{ solicitudes|length }} registros</span>
-            </h5>
-            <a href="/solicitudes/crear" class="btn btn-light btn-sm">
-                ＋ Nueva Solicitud
-            </a>
+                        <div class="col-md-2">
+                            <div class="card bg-warning text-white clickable-card" onclick="filtrarPorEstado('Pendiente')">
+                                <div class="card-body">
+                                    <h6>Pendientes</h6>
+                                    <h4>{{ solicitudes_pendientes }}</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="card bg-success text-white clickable-card" onclick="filtrarPorEstado('Aprobada')">
+                                <div class="card-body">
+                                    <h6>Aprobadas</h6>
+                                    <h4>{{ solicitudes_aprobadas }}</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="card bg-danger text-white clickable-card" onclick="filtrarPorEstado('Rechazada')">
+                                <div class="card-body">
+                                    <h6>Rechazadas</h6>
+                                    <h4>{{ solicitudes_rechazadas }}</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="card bg-info text-white clickable-card" onclick="filtrarPorEstado('Devuelta')">
+                                <div class="card-body">
+                                    <h6>Devueltas</h6>
+                                    <h4>{{ solicitudes_devueltas or 0 }}</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <!-- Cambiado para filtrar todas las novedades -->
+                            <div class="card bg-secondary text-white clickable-card" onclick="filtrarTodasNovedades()">
+                                <div class="card-body">
+                                    <h6>Novedades</h6>
+                                    <h4>{{ solicitudes_novedad or 0 }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
+    </div>
+
+    <!-- Mensajes flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
             {% endfor %}
-            {% endif %}
-            {% endwith %}
-            
-            {% if solicitudes %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>ID</th>
-                            <th>Material</th>
-                            <th>Solicitante</th>
-                            <th>Oficina</th>
-                            <th>Cantidad</th>
-                            <th>Estado</th>
-                            <th>Fecha Solicitud</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for solicitud in solicitudes %}
-                        <tr>
-                            <td><strong>#{{ solicitud.id }}</strong></td>
-                            <td>{{ solicitud.material_nombre }}</td>
-                            <td>{{ solicitud.usuario_solicitante }}</td>
-                            <td>{{ solicitud.oficina_nombre }}</td>
-                            <td>
-                                <span class="badge bg-primary">{{ solicitud.cantidad_solicitada }}</span>
-                            </td>
-                            <td>
-                                {% if solicitud.estado == 'aprobada' %}
-                                <span class="badge bg-success">✅ Aprobada</span>
-                                {% elif solicitud.estado == 'rechazada' %}
-                                <span class="badge bg-danger">❌ Rechazada</span>
-                                {% else %}
-                                <span class="badge bg-warning">⏳ Pendiente</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if solicitud.fecha_solicitud %}
-                                {{ solicitud.fecha_solicitud.strftime('%d/%m/%Y %H:%M') }}
-                                {% else %}
-                                <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if solicitud.estado|lower == 'pendiente' and session.rol in ['aprobador', 'administrador'] %}
-                                <div class="btn-group" role="group">
-                                    <form method="POST" action="/solicitudes/aprobar/{{ solicitud.id }}"
-                                          style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea APROBAR esta solicitud?');">
-                                        <button type="submit" class="btn btn-success btn-sm">
-                                            ✅ Aprobar
-                                        </button>
-                                    </form>
-                                    <button type="button" class="btn btn-danger btn-sm"
-                                            onclick="mostrarObservacion({{ solicitud.id }})">
-                                        ❌ Rechazar
-                                    </button>
-                                </div>
-                                <div id="observacionDiv_{{ solicitud.id }}" class="mt-2" style="display:none;">
-                                    <form method="POST" action="/solicitudes/rechazar/{{ solicitud.id }}">
-                                        <textarea name="observacion" class="form-control" rows="2"
-                                                  placeholder="Observación (opcional)"></textarea>
-                                        <button type="submit" class="btn btn-danger btn-sm mt-1">
-                                            Confirmar Rechazo
-                                        </button>
-                                    </form>
-                                </div>
-                                {% else %}
-                                <a href="/solicitudes/{{ solicitud.id }}" class="btn btn-sm btn-outline-primary">
-                                    👁️ Ver
-                                </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Tabla de solicitudes -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">📋 Lista de Solicitudes ({{ solicitudes|length }} registros)</h5>
+                    
+                    {% if can_access('solicitudes', 'create') %}
+                    <a href="/solicitudes/crear" class="btn btn-light btn-sm">
+                        ➕ Nueva Solicitud
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="card-body">
+                    {% if solicitudes %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Material</th>
+                                        <th>Cantidad</th>
+                                        <th>Solicitante</th>
+                                        <th>Oficina</th>
+                                        <th>Fecha</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {% for solicitud in solicitudes %}
+                                    <tr>
+                                        <td>#{{ solicitud.id }}</td>
+                                        <td>{{ solicitud.material_nombre }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ solicitud.cantidad_solicitada }}</span>
+                                            {% if solicitud.cantidad_entregada and solicitud.cantidad_entregada != solicitud.cantidad_solicitada %}
+                                            <br><small>Entregado: {{ solicitud.cantidad_entregada }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ solicitud.usuario_solicitante }}</td>
+                                        <td>{{ solicitud.oficina_nombre }}</td>
+                                        <td>
+                                            {{ solicitud.fecha_solicitud.strftime('%d/%m/%Y') if solicitud.fecha_solicitud else 'N/A' }}
+                                            <br>
+                                            <small class="text-muted">{{ solicitud.fecha_solicitud.strftime('%H:%M') if solicitud.fecha_solicitud else '' }}</small>
+                                        </td>
+                                        <td>
+                                            {% if solicitud.estado == 'Pendiente' or solicitud.estado_id == 1 %}
+                                                <span class="badge bg-warning">{{ solicitud.estado or 'Pendiente' }}</span>
+                                            {% elif solicitud.estado == 'Aprobada' or solicitud.estado_id == 2 %}
+                                                <span class="badge bg-success">{{ solicitud.estado or 'Aprobada' }}</span>
+                                            {% elif solicitud.estado == 'Rechazada' or solicitud.estado_id == 3 %}
+                                                <span class="badge bg-danger">{{ solicitud.estado or 'Rechazada' }}</span>
+                                            {% elif solicitud.estado == 'Entregada Parcial' or solicitud.estado_id == 4 %}
+                                                <span class="badge bg-info">{{ solicitud.estado or 'Entregada Parcial' }}</span>
+                                            {% elif solicitud.estado == 'Completada' or solicitud.estado_id == 5 %}
+                                                <span class="badge bg-success">{{ solicitud.estado or 'Completada' }}</span>
+                                            {% elif solicitud.estado == 'Devuelta' or solicitud.estado_id == 6 %}
+                                                <span class="badge bg-primary">{{ solicitud.estado or 'Devuelta' }}</span>
+                                            {% elif solicitud.estado == 'Novedad Registrada' or solicitud.estado_id == 7 %}
+                                                <span class="badge bg-secondary">{{ solicitud.estado or 'Novedad Registrada' }}</span>
+                                            {% elif solicitud.estado == 'Novedad Aceptada' or solicitud.estado_id == 8 %}
+                                                <span class="badge bg-success">{{ solicitud.estado or 'Novedad Aceptada' }}</span>
+                                            {% elif solicitud.estado == 'Novedad Rechazada' or solicitud.estado_id == 9 %}
+                                                <span class="badge bg-danger">{{ solicitud.estado or 'Novedad Rechazada' }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ solicitud.estado or 'Desconocido' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <!-- Botón Detalles (siempre visible) -->
+                                                <button type="button" class="btn btn-info btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#detalleSolicitudModal"
+                                                        onclick="cargarDetalleSolicitud({{ solicitud.id }})"
+                                                        title="Ver detalles">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                
+                                                <!-- Botón de Devolución (condicional) -->
+                                                {% if should_show_devolucion_button(solicitud) %}
+                                                <button type="button" class="btn btn-warning btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#devolucionModal"
+                                                        onclick="cargarDevolucion({{ solicitud.id }})"
+                                                        title="Solicitar devolución">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                                {% endif %}
+                                                
+                                                <!-- Botón de Gestionar Devolución (condicional) -->
+                                                {% if should_show_gestion_devolucion_button(solicitud) %}
+                                                <button type="button" class="btn btn-info btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#gestionDevolucionModal"
+                                                        onclick="cargarGestionDevolucion({{ solicitud.id }})"
+                                                        title="Gestionar devolución pendiente">
+                                                    <i class="fas fa-clipboard-check"></i>
+                                                </button>
+                                                {% endif %}
+                                                
+                                                <!-- Botón de Crear Novedad (condicional) -->
+                                                {% if should_show_novedad_button(solicitud) %}
+                                                <button type="button" class="btn btn-danger btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#novedadModal"
+                                                        onclick="cargarNovedad({{ solicitud.id }})"
+                                                        title="Registrar novedad">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </button>
+                                                {% endif %}
+                                                
+                                                <!-- Botón de Gestionar Novedad (condicional) -->
+                                                {% if should_show_gestion_novedad_button(solicitud) %}
+                                                <button type="button" class="btn btn-secondary btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#gestionNovedadModal"
+                                                        onclick="cargarGestionNovedad({{ solicitud.id }})"
+                                                        title="Gestionar novedad">
+                                                    <i class="fas fa-cogs"></i>
+                                                </button>
+                                                {% endif %}
+                                                
+                                                <!-- Botones de Aprobación/Rechazo (condicional) -->
+                                                {% if should_show_aprobacion_buttons(solicitud) %}
+                                                    {% if can_approve_solicitud() %}
+                                                    <button type="button" class="btn btn-success btn-sm" 
+                                                            onclick="aprobarSolicitud({{ solicitud.id }})"
+                                                            title="Aprobar solicitud">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    
+                                                    {% if can_reject_solicitud() %}
+                                                    <button type="button" class="btn btn-danger btn-sm" 
+                                                            onclick="rechazarSolicitud({{ solicitud.id }})"
+                                                            title="Rechazar solicitud">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    
+                                                    {% if can_approve_partial_solicitud() %}
+                                                    <button type="button" class="btn btn-primary btn-sm" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#aprobarParcialModal"
+                                                            onclick="cargarAprobarParcial({{ solicitud.id }}, {{ solicitud.cantidad_solicitada }}, '{{ solicitud.material_nombre }}', '{{ solicitud.usuario_solicitante }}')"
+                                                            title="Aprobar parcialmente">
+                                                        <i class="fas fa-check-double"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info text-center">
+                            <h5>📭 No hay solicitudes</h5>
+                            <p class="mb-3">No se encontraron solicitudes con los filtros aplicados.</p>
+                            {% if can_access('solicitudes', 'create') %}
+                            <a href="/solicitudes/crear" class="btn btn-primary me-2">
+                                ➕ Crear Primera Solicitud
+                            </a>
+                            {% endif %}
+                            <a href="/solicitudes" class="btn btn-secondary">
+                                🔄 Limpiar Filtros
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <div class="alert alert-info text-center mt-3">
-                <h5>📭 No hay solicitudes</h5>
-                <p>No se encontraron solicitudes registradas.</p>
-                <a href="/solicitudes/crear" class="btn btn-primary">➕ Crear Primera Solicitud</a>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
 
+<!-- MODALES -->
+
+<!-- Modal Detalle Solicitud -->
+<div class="modal fade" id="detalleSolicitudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Detalles de la Solicitud</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detalle-solicitud-container">
+                    <!-- Detalles de la solicitud se cargarán aquí -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aprobar Parcial -->
+<div class="modal fade" id="aprobarParcialModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Aprobar Parcialmente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Material:</strong> <span id="material-nombre-parcial"></span></p>
+                <p><strong>Solicitante:</strong> <span id="solicitante-nombre-parcial"></span></p>
+                <p><strong>Cantidad Solicitada:</strong> <span id="cantidad-solicitada-parcial"></span></p>
+                
+                <div class="mb-3">
+                    <label for="cantidad-aprobar" class="form-label">Cantidad a Aprobar:</label>
+                    <input type="number" class="form-control" id="cantidad-aprobar" min="1" required>
+                    <div class="form-text">Máximo: <span id="maximo-aprobar"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarAprobacionParcial()">Aprobar Parcialmente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Devolución (SOLICITAR) -->
+<div class="modal fade" id="devolucionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-undo"></i> Solicitar Devolución</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Imagen del material -->
+                <div id="material-info-devolucion" class="text-center mb-3" style="display: none;">
+                    <img id="material-imagen-devolucion" src="" alt="Material" 
+                         class="img-fluid rounded shadow-sm mb-2" 
+                         style="max-height: 100px; object-fit: contain;">
+                </div>
+                
+                <p><strong>Material:</strong> <span id="material-nombre-devolucion"></span></p>
+                <p><strong>Cantidad Entregada:</strong> <span id="cantidad-entregada"></span></p>
+                <p><strong>Cantidad Ya Devuelta:</strong> <span id="cantidad-ya-devuelta"></span></p>
+                
+                <input type="hidden" id="solicitud-id-devolucion">
+                
+                <div class="mb-3">
+                    <label for="cantidad-devuelta" class="form-label">Cantidad a Devolver:</label>
+                    <input type="number" class="form-control" id="cantidad-devuelta" min="1" required>
+                    <div class="form-text">Máximo a devolver: <span id="max-devolver"></span></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="motivo-devolucion" class="form-label">Motivo de la devolución:</label>
+                    <textarea class="form-control" id="motivo-devolucion" rows="2" 
+                              placeholder="Explique brevemente el motivo de la devolución..."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="imagen-devolucion" class="form-label">Imagen del material (opcional):</label>
+                    <input type="file" class="form-control" id="imagen-devolucion" accept="image/*" 
+                           onchange="previsualizarImagenDevolucion(this)">
+                    <div id="preview-imagen-devolucion" class="mt-2 text-center" style="display: none;">
+                        <img id="preview-img-devolucion" src="" alt="Previsualización" 
+                             class="img-fluid rounded border" style="max-height: 120px;">
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>Nota:</strong> La devolución quedará pendiente de aprobación por un administrador.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="solicitarDevolucion()">
+                    <i class="fas fa-paper-plane"></i> Solicitar Devolución
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gestionar Devolución (APROBAR/RECHAZAR) -->
+<div class="modal fade" id="gestionDevolucionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-clipboard-check"></i> Gestionar Devolución</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="info-devolucion-container">
+                    <!-- Información de la devolución se cargará aquí -->
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Observaciones:</label>
+                    <textarea class="form-control" id="observaciones-devolucion" rows="2" 
+                              placeholder="Observaciones opcionales..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="gestionarDevolucion('rechazar')">
+                    <i class="fas fa-times"></i> Rechazar
+                </button>
+                <button type="button" class="btn btn-success" onclick="gestionarDevolucion('aprobar')">
+                    <i class="fas fa-check"></i> Aprobar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novedad -->
+<div class="modal fade" id="novedadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Registrar Novedad</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="solicitud-id-novedad">
+                
+                <!-- ✅ Contenedor para imagen del material -->
+                <div id="material-info-novedad" class="text-center mb-3" style="display: none;">
+                    <img id="material-imagen-novedad" src="" alt="Material" 
+                         class="img-fluid rounded shadow-sm mb-2" 
+                         style="max-height: 100px; object-fit: contain;">
+                    <p class="mb-0"><strong id="material-nombre-novedad"></strong></p>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="tipo-novedad" class="form-label">Tipo de Novedad:</label>
+                    <select class="form-select" id="tipo-novedad" required>
+                        <option value="">Seleccione...</option>
+                        <option value="daño">Daño o Rotura</option>
+                        <option value="perdida">Pérdida</option>
+                        <option value="defectuoso">Material Defectuoso</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="cantidad-afectada" class="form-label">Cantidad Afectada:</label>
+                    <input type="number" class="form-control" id="cantidad-afectada" min="1" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="descripcion-novedad" class="form-label">Descripción:</label>
+                    <textarea class="form-control" id="descripcion-novedad" rows="3" required></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="imagen-novedad" class="form-label">
+                        Imagen de evidencia <span class="text-danger">*</span> <small class="text-muted">(obligatorio)</small>
+                    </label>
+                    <input type="file" class="form-control" id="imagen-novedad" accept="image/*" onchange="previsualizarImagenNovedad(this)" required>
+                    <div class="form-text text-warning">
+                        <i class="fas fa-camera"></i> Debe adjuntar una foto del material afectado como evidencia.
+                    </div>
+                    <!-- ✅ Previsualización de imagen -->
+                    <div id="preview-imagen-novedad" class="mt-2 text-center" style="display: none;">
+                        <img id="preview-img-novedad" src="" alt="Previsualización" 
+                             class="img-fluid rounded border" style="max-height: 150px;">
+                        <br>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="quitarImagenNovedad()">
+                            <i class="fas fa-times"></i> Quitar imagen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="registrarNovedad()">Registrar Novedad</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Gestión de Novedad -->
+<div class="modal fade" id="gestionNovedadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title">Gestionar Novedad</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="info-novedad-container">
+                    <!-- Información de la novedad se cargará aquí -->
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Observaciones:</label>
+                    <textarea class="form-control" id="observaciones-gestion" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="gestionarNovedad('rechazar')">Rechazar Novedad</button>
+                <button type="button" class="btn btn-success" onclick="gestionarNovedad('aceptar')">Aceptar Novedad</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ super() }}
+
+{% endblock %}
+
+{% block scripts %}
 <script>
-    function mostrarObservacion(solicitudId) {
-        document.querySelectorAll('[id^="observacionDiv_"]').forEach(div => {
-            div.style.display = 'none';
-        });
-        document.getElementById(`observacionDiv_${solicitudId}`).style.display = 'block';
+// Variables globales
+let solicitudActualId = null;
+
+// Navegación segura (evita Open Redirect).
+// Solo permite rutas relativas absolutas dentro de la app ("/...").
+function safeNavigate(dest) {
+    try {
+        if (typeof dest !== 'string') return;
+
+        const d = dest.trim();
+
+        // Permitir solo rutas relativas absolutas de la app: "/..."
+        if (!d.startsWith('/') || d.startsWith('//')) return;
+
+        // Bloquear backslashes y caracteres de control
+        if (d.includes('\\') || /[\r\n\t]/.test(d)) return;
+
+        // Lista blanca de caracteres comunes en rutas + query/hash
+        if (!/^\/[A-Za-z0-9\-._~\/?#[\]@!$&'()*+,;=%]*$/.test(d)) return;
+
+        window.location.href = d;
+    } catch (e) {
+        // no-op
     }
+}
+
+// Función para filtrar por estado
+
+function filtrarPorEstado(estado) {
+    const url = new URL(window.location.href);
+    if (estado && estado !== 'todos') {
+        url.searchParams.set('estado', estado);
+    } else {
+        url.searchParams.delete('estado');
+    }
+    safeNavigate(url.pathname + url.search + url.hash);
+}
+
+// Función para filtrar todas las novedades
+function filtrarTodasNovedades() {
+    const url = new URL(window.location.href);
+    
+    // Crear un parámetro que el backend pueda interpretar para filtrar todas las novedades
+    // Podemos usar un valor especial o dejarlo vacío para que el backend haga la lógica
+    url.searchParams.set('estado', 'todas_novedades');
+    
+    safeNavigate(url.pathname + url.search + url.hash);
+}
+
+// Función para cargar detalles de solicitud
+function cargarDetalleSolicitud(solicitudId) {
+    fetch(`/solicitudes/api/${solicitudId}/detalles`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const solicitud = data.solicitud;
+                const container = document.getElementById('detalle-solicitud-container');
+                
+                // ✅ Construir URL de imagen del material
+                let imagenHtml = '';
+                if (solicitud.material_imagen) {
+                    imagenHtml = `
+                        <div class="text-center mb-3">
+                            <img src="/static/uploads/${solicitud.material_imagen}" 
+                                 alt="${solicitud.material_nombre}" 
+                                 class="img-fluid rounded shadow" 
+                                 style="max-height: 150px; object-fit: contain;"
+                                 onerror="this.style.display='none'">
+                        </div>
+                    `;
+                }
+                
+                let html = `
+                    ${imagenHtml}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Información Básica</h6>
+                            <p><strong>ID:</strong> #${solicitud.id}</p>
+                            <p><strong>Estado:</strong> <span class="badge bg-${getEstadoColor(solicitud.estado_id)}">${solicitud.estado}</span></p>
+                            <p><strong>Fecha Solicitud:</strong> ${solicitud.fecha_solicitud}</p>
+                            <p><strong>Observación:</strong> ${solicitud.observacion || 'Sin observación'}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Detalles del Material</h6>
+                            <p><strong>Material:</strong> ${solicitud.material_nombre}</p>
+                            <p><strong>Cantidad Solicitada:</strong> ${solicitud.cantidad_solicitada}</p>
+                            <p><strong>Cantidad Entregada:</strong> ${solicitud.cantidad_entregada || 0}</p>
+                            <p><strong>Stock Disponible:</strong> ${solicitud.stock_disponible || 0}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Información del Solicitante</h6>
+                            <p><strong>Solicitante:</strong> ${solicitud.usuario_solicitante}</p>
+                            <p><strong>Oficina:</strong> ${solicitud.oficina_nombre}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Valores Financieros</h6>
+                            <p><strong>Valor Total:</strong> ${formatoMoneda(solicitud.valor_total_solicitado || 0)}</p>
+                            <p><strong>Valor Oficina (${solicitud.porcentaje_oficina || 0}%):</strong> ${formatoMoneda(solicitud.valor_oficina || 0)}</p>
+                            <p><strong>Valor Sede:</strong> ${formatoMoneda(solicitud.valor_sede_principal || 0)}</p>
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+            } else {
+                alert('Error al cargar detalles de la solicitud');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar detalles de la solicitud');
+        });
+}
+
+// Función para obtener color según estado
+function getEstadoColor(estadoId) {
+    switch(estadoId) {
+        case 1: return 'warning'; // Pendiente
+        case 2: return 'success'; // Aprobada
+        case 3: return 'danger';  // Rechazada
+        case 4: return 'info';    // Entregada Parcial
+        case 5: return 'success'; // Completada
+        case 6: return 'primary'; // Devuelta
+        case 7: return 'secondary'; // Novedad Registrada
+        case 8: return 'success'; // Novedad Aceptada
+        case 9: return 'danger';  // Novedad Rechazada
+        default: return 'secondary';
+    }
+}
+
+// Formato de moneda
+function formatoMoneda(valor) {
+    if (isNaN(valor) || valor === null || valor === undefined) {
+        return '$0.00';
+    }
+    return `$${parseFloat(valor).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Función para aprobar solicitud completa
+function aprobarSolicitud(solicitudId) {
+    if (!confirm('¿Está seguro que desea aprobar esta solicitud?')) {
+        return;
+    }
+
+    fetch(`/solicitudes/aprobar/${solicitudId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Solicitud aprobada exitosamente');
+            location.reload();
+        } else {
+            alert(data.message || 'Error al aprobar la solicitud');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al aprobar la solicitud');
+    });
+}
+
+// Función para rechazar solicitud
+function rechazarSolicitud(solicitudId) {
+    const motivo = prompt('Ingrese el motivo del rechazo:');
+    if (!motivo || motivo.trim() === '') {
+        alert('Debe ingresar un motivo para rechazar la solicitud');
+        return;
+    }
+
+    if (!confirm('¿Está seguro que desea rechazar esta solicitud?')) {
+        return;
+    }
+
+    fetch(`/solicitudes/rechazar/${solicitudId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify({ observacion: motivo.trim() })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Solicitud rechazada exitosamente');
+            location.reload();
+        } else {
+            alert(data.message || 'Error al rechazar la solicitud');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al rechazar la solicitud');
+    });
+}
+
+// Función para cargar información para aprobar parcialmente
+function cargarAprobarParcial(solicitudId, cantidadSolicitada, materialNombre, solicitanteNombre) {
+    solicitudActualId = solicitudId;
+    
+    document.getElementById('material-nombre-parcial').textContent = materialNombre;
+    document.getElementById('solicitante-nombre-parcial').textContent = solicitanteNombre;
+    document.getElementById('cantidad-solicitada-parcial').textContent = cantidadSolicitada;
+    document.getElementById('maximo-aprobar').textContent = cantidadSolicitada;
+    
+    const input = document.getElementById('cantidad-aprobar');
+    input.value = '';
+    input.max = cantidadSolicitada;
+    input.placeholder = `Máximo: ${cantidadSolicitada}`;
+}
+
+// Función para confirmar aprobación parcial
+function confirmarAprobacionParcial() {
+    const cantidad = parseInt(document.getElementById('cantidad-aprobar').value);
+    const maximo = parseInt(document.getElementById('cantidad-aprobar').max);
+
+    if (!cantidad || cantidad < 1) {
+        alert('Ingrese una cantidad válida');
+        return;
+    }
+
+    if (cantidad > maximo) {
+        alert(`La cantidad no puede superar ${maximo}`);
+        return;
+    }
+
+    if (!confirm(`¿Está seguro que desea aprobar ${cantidad} unidades de esta solicitud?`)) {
+        return;
+    }
+
+    fetch(`/solicitudes/aprobar_parcial/${solicitudActualId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify({ cantidad_aprobada: cantidad })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Solicitud aprobada parcialmente exitosamente');
+            location.reload();
+        } else {
+            alert(data.message || 'Error al aprobar parcialmente la solicitud');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al aprobar parcialmente la solicitud');
+    });
+}
+
+// Función para cargar información de devolución
+function cargarDevolucion(solicitudId) {
+    document.getElementById('solicitud-id-devolucion').value = solicitudId;
+    document.getElementById('motivo-devolucion').value = '';
+    document.getElementById('imagen-devolucion').value = '';
+    document.getElementById('preview-imagen-devolucion').style.display = 'none';
+    
+    fetch(`/solicitudes/api/${solicitudId}/info-devolucion`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('material-nombre-devolucion').textContent = data.material_nombre;
+                document.getElementById('cantidad-entregada').textContent = data.cantidad_entregada;
+                document.getElementById('cantidad-ya-devuelta').textContent = data.cantidad_ya_devuelta;
+                
+                const maxDevolver = data.cantidad_entregada - data.cantidad_ya_devuelta;
+                document.getElementById('max-devolver').textContent = maxDevolver;
+                
+                const input = document.getElementById('cantidad-devuelta');
+                input.max = maxDevolver;
+                input.value = maxDevolver > 0 ? 1 : 0;
+                input.placeholder = `Máximo: ${maxDevolver}`;
+                
+                // Cargar imagen del material si existe
+                const container = document.getElementById('material-info-devolucion');
+                const imagen = document.getElementById('material-imagen-devolucion');
+                if (data.material_imagen) {
+                    imagen.src = `/static/uploads/${data.material_imagen}`;
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            } else {
+                alert('Error al cargar información para devolución');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar información para devolución');
+        });
+}
+
+// Función para previsualizar imagen de devolución
+function previsualizarImagenDevolucion(input) {
+    const preview = document.getElementById('preview-imagen-devolucion');
+    const previewImg = document.getElementById('preview-img-devolucion');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Función para SOLICITAR devolución (nuevo flujo con aprobación)
+function solicitarDevolucion() {
+    const solicitudId = document.getElementById('solicitud-id-devolucion').value;
+    const cantidad = parseInt(document.getElementById('cantidad-devuelta').value);
+    const maximo = parseInt(document.getElementById('cantidad-devuelta').max);
+    const motivo = document.getElementById('motivo-devolucion').value.trim();
+    const imagenInput = document.getElementById('imagen-devolucion');
+    const imagenArchivo = imagenInput.files[0];
+
+    if (!cantidad || cantidad < 1) {
+        alert('Ingrese una cantidad válida');
+        return;
+    }
+
+    if (cantidad > maximo) {
+        alert(`La cantidad no puede superar ${maximo}`);
+        return;
+    }
+
+    if (!confirm(`¿Está seguro que desea solicitar la devolución de ${cantidad} unidades?\n\nLa solicitud quedará pendiente de aprobación.`)) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('cantidad_devuelta', cantidad);
+    formData.append('motivo', motivo);
+    
+    if (imagenArchivo) {
+        formData.append('imagen_devolucion', imagenArchivo);
+    }
+
+    fetch(`/solicitudes/solicitar-devolucion/${solicitudId}`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Solicitud de devolución registrada');
+            location.reload();
+        } else {
+            alert(data.message || 'Error al solicitar la devolución');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al solicitar la devolución');
+    });
+}
+
+// Variable para almacenar ID de devolución actual
+let devolucionActualId = null;
+
+// Función para cargar información de devolución para gestión
+function cargarGestionDevolucion(solicitudId) {
+    fetch(`/solicitudes/api/${solicitudId}/devolucion-pendiente`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.devolucion) {
+                const dev = data.devolucion;
+                const container = document.getElementById('info-devolucion-container');
+                
+                // Construir HTML de imágenes
+                let imagenesHtml = '';
+                
+                if (dev.material_imagen) {
+                    imagenesHtml += `
+                        <div class="col-md-6 text-center mb-2">
+                            <small class="text-muted d-block mb-1">Material</small>
+                            <img src="/static/uploads/${dev.material_imagen}" 
+                                 alt="Material" 
+                                 class="img-fluid rounded shadow-sm" 
+                                 style="max-height: 120px; object-fit: contain;"
+                                 onerror="this.parentElement.style.display='none'">
+                        </div>
+                    `;
+                }
+                
+                if (dev.devolucion_imagen) {
+                    imagenesHtml += `
+                        <div class="col-md-6 text-center mb-2">
+                            <small class="text-muted d-block mb-1">Imagen adjunta</small>
+                            <img src="/static/${dev.devolucion_imagen}" 
+                                 alt="Imagen devolución" 
+                                 class="img-fluid rounded shadow-sm border border-warning" 
+                                 style="max-height: 120px; object-fit: contain;"
+                                 onerror="this.parentElement.style.display='none'">
+                        </div>
+                    `;
+                }
+                
+                let html = `
+                    ${imagenesHtml ? '<div class="row mb-3">' + imagenesHtml + '</div>' : ''}
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-undo"></i> Solicitud de Devolución Pendiente</h6>
+                        <p><strong>Material:</strong> ${dev.material_nombre}</p>
+                        <p><strong>Cantidad a devolver:</strong> ${dev.cantidad_devuelta} unidades</p>
+                        <p><strong>Solicitado por:</strong> ${dev.usuario_solicita}</p>
+                        <p><strong>Fecha:</strong> ${dev.fecha_devolucion}</p>
+                        <p><strong>Motivo:</strong> ${dev.motivo || 'No especificado'}</p>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+                devolucionActualId = dev.devolucion_id;
+            } else {
+                alert('No se encontró devolución pendiente para esta solicitud');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar información de devolución');
+        });
+}
+
+// Función para gestionar devolución (aprobar/rechazar)
+function gestionarDevolucion(accion) {
+    if (!devolucionActualId) {
+        alert('No se encontró el ID de la devolución');
+        return;
+    }
+
+    const confirmacion = accion === 'aprobar' 
+        ? '¿Está seguro que desea APROBAR esta devolución?\n\nEl stock del material será actualizado.'
+        : '¿Está seguro que desea RECHAZAR esta devolución?';
+
+    if (!confirm(confirmacion)) {
+        return;
+    }
+
+    const observaciones = document.getElementById('observaciones-devolucion').value;
+    const endpoint = accion === 'aprobar' ? '/solicitudes/aprobar-devolucion' : '/solicitudes/rechazar-devolucion';
+
+    fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify({
+            devolucion_id: devolucionActualId,
+            observaciones: observaciones
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || `Devolución ${accion === 'aprobar' ? 'aprobada' : 'rechazada'} exitosamente`);
+            location.reload();
+        } else {
+            alert(data.message || `Error al ${accion === 'aprobar' ? 'aprobar' : 'rechazar'} la devolución`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error al ${accion === 'aprobar' ? 'aprobar' : 'rechazar'} la devolución`);
+    });
+}
+
+// Mantener función antigua por compatibilidad
+function registrarDevolucion() {
+    solicitarDevolucion();
+}
+
+// Función para cargar información para crear novedad
+function cargarNovedad(solicitudId) {
+    document.getElementById('solicitud-id-novedad').value = solicitudId;
+    
+    // ✅ Limpiar formulario
+    document.getElementById('tipo-novedad').value = '';
+    document.getElementById('cantidad-afectada').value = '';
+    document.getElementById('descripcion-novedad').value = '';
+    document.getElementById('imagen-novedad').value = '';
+    document.getElementById('preview-imagen-novedad').style.display = 'none';
+    
+    // ✅ Cargar información del material (incluyendo imagen)
+    fetch(`/solicitudes/api/${solicitudId}/detalles`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.solicitud) {
+                const solicitud = data.solicitud;
+                const container = document.getElementById('material-info-novedad');
+                const imagen = document.getElementById('material-imagen-novedad');
+                const nombre = document.getElementById('material-nombre-novedad');
+                
+                if (solicitud.material_imagen) {
+                    imagen.src = `/static/uploads/${solicitud.material_imagen}`;
+                    imagen.style.display = 'block';
+                    container.style.display = 'block';
+                } else {
+                    imagen.style.display = 'none';
+                }
+                
+                nombre.textContent = solicitud.material_nombre || '';
+                if (solicitud.material_nombre) {
+                    container.style.display = 'block';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error cargando info de material:', error);
+        });
+}
+
+// ✅ Función para previsualizar imagen de novedad
+function previsualizarImagenNovedad(input) {
+    const preview = document.getElementById('preview-imagen-novedad');
+    const previewImg = document.getElementById('preview-img-novedad');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// ✅ Función para quitar imagen de novedad
+function quitarImagenNovedad() {
+    document.getElementById('imagen-novedad').value = '';
+    document.getElementById('preview-imagen-novedad').style.display = 'none';
+}
+
+// Función para registrar novedad
+function registrarNovedad() {
+    const solicitudId = document.getElementById('solicitud-id-novedad').value;
+    const tipoNovedad = document.getElementById('tipo-novedad').value;
+    const cantidadAfectada = parseInt(document.getElementById('cantidad-afectada').value);
+    const descripcion = document.getElementById('descripcion-novedad').value.trim();
+    const imagenInput = document.getElementById('imagen-novedad');
+    const imagenArchivo = imagenInput.files[0];
+
+    if (!tipoNovedad) {
+        alert('Seleccione el tipo de novedad');
+        return;
+    }
+
+    if (!cantidadAfectada || cantidadAfectada < 1) {
+        alert('Ingrese una cantidad válida');
+        return;
+    }
+
+    if (!descripcion || descripcion.length < 10) {
+        alert('La descripción es obligatoria y debe tener al menos 10 caracteres');
+        return;
+    }
+
+    // ✅ IMAGEN OBLIGATORIA
+    if (!imagenArchivo) {
+        alert('⚠️ La imagen de evidencia es OBLIGATORIA.\nDebe adjuntar una foto del material afectado.');
+        document.getElementById('imagen-novedad').focus();
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('solicitud_id', solicitudId);
+    formData.append('tipo_novedad', tipoNovedad);
+    formData.append('cantidad_afectada', cantidadAfectada);
+    formData.append('descripcion', descripcion);
+    formData.append('imagen_novedad', imagenArchivo);
+
+    fetch('/solicitudes/registrar-novedad', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Novedad registrada exitosamente');
+            location.reload();
+        } else {
+            alert(data.message || 'Error al registrar la novedad');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al registrar la novedad');
+    });
+}
+
+// Función para cargar información de novedad para gestión
+function cargarGestionNovedad(solicitudId) {
+    fetch(`/solicitudes/api/${solicitudId}/novedad`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.novedad) {
+                const novedad = data.novedad;
+                const container = document.getElementById('info-novedad-container');
+                
+                // ✅ Construir HTML de imágenes
+                let imagenesHtml = '';
+                
+                // Imagen del material
+                if (novedad.material_imagen) {
+                    imagenesHtml += `
+                        <div class="col-md-6 text-center mb-2">
+                            <small class="text-muted d-block mb-1">Material</small>
+                            <img src="/static/uploads/${novedad.material_imagen}" 
+                                 alt="Material" 
+                                 class="img-fluid rounded shadow-sm" 
+                                 style="max-height: 120px; object-fit: contain;"
+                                 onerror="this.parentElement.style.display='none'">
+                        </div>
+                    `;
+                }
+                
+                // Imagen de la novedad
+                if (novedad.novedad_imagen) {
+                    imagenesHtml += `
+                        <div class="col-md-6 text-center mb-2">
+                            <small class="text-muted d-block mb-1">Evidencia Novedad</small>
+                            <img src="/static/${novedad.novedad_imagen}" 
+                                 alt="Evidencia de novedad" 
+                                 class="img-fluid rounded shadow-sm border border-danger" 
+                                 style="max-height: 120px; object-fit: contain;"
+                                 onerror="this.parentElement.style.display='none'">
+                        </div>
+                    `;
+                }
+                
+                let html = `
+                    ${imagenesHtml ? '<div class="row mb-3">' + imagenesHtml + '</div>' : ''}
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-exclamation-circle"></i> Información de la Novedad</h6>
+                        <p><strong>Tipo:</strong> ${novedad.tipo_novedad}</p>
+                        <p><strong>Descripcion:</strong> ${novedad.descripcion}</p>
+                        <p><strong>Cantidad Afectada:</strong> ${novedad.cantidad_afectada}</p>
+                        <p><strong>Registrada por:</strong> ${novedad.usuario_registra}</p>
+                        <p><strong>Fecha:</strong> ${novedad.fecha_registro}</p>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+                
+                // Guardar el ID de la solicitud en una variable global
+                solicitudActualId = solicitudId;
+            } else {
+                alert('No se encontró información de novedad para esta solicitud');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar información de novedad');
+        });
+}
+
+// Función para gestionar novedad (aceptar/rechazar)
+function gestionarNovedad(accion) {
+    if (!solicitudActualId) {
+        alert('No se encontró el ID de la solicitud');
+        return;
+    }
+
+    const confirmacion = accion === 'aceptar' 
+        ? '¿Está seguro que desea ACEPTAR la novedad?'
+        : '¿Está seguro que desea RECHAZAR la novedad?';
+
+    if (!confirm(confirmacion)) {
+        return;
+    }
+
+    const observaciones = document.getElementById('observaciones-gestion').value;
+
+    fetch('/solicitudes/gestionar-novedad', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify({
+            solicitud_id: solicitudActualId,
+            accion: accion,
+            observaciones: observaciones
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || `Novedad ${accion === 'aceptar' ? 'aceptada' : 'rechazada'} exitosamente`);
+            location.reload();
+        } else {
+            alert(data.message || `Error al ${accion === 'aceptar' ? 'aceptar' : 'rechazar'} la novedad`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error al ${accion === 'aceptar' ? 'aceptar' : 'rechazar'} la novedad`);
+    });
+}
+
+// Inicializar tooltips de Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 </script>
 
 <style>
     .table th {
         white-space: nowrap;
     }
-    
+
     .badge {
         font-size: 0.8em;
+    }
+
+    .card-body h4 {
+        margin-bottom: 0;
+    }
+    
+    .clickable-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .clickable-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .text-muted small {
+        font-size: 0.75em;
+    }
+    
+    .btn-group .btn {
+        margin: 1px;
     }
 </style>
 {% endblock %}

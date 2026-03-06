@@ -80,15 +80,13 @@ class Database:
             return None
 
         except pyodbc.OperationalError as e:
-            logger.error("Error operacional al conectar a la BD: %s", type(e).__name__)
-            msg = str(e)
-            if "Named Pipes" in msg or "Server is not found" in msg or "Login timeout" in msg:
-                logger.error(
-                    "Diagnóstico: verifica servicio SQL, nombre de instancia, firewall/puerto, y permisos. "
-                    "Instancia: %s | BD: %s",
-                    self.server, self.database
-                )
+            logger.error("BD OperationalError: %s | args=%s", str(e), getattr(e, "args", None))
+            logger.error(
+                "BD Config -> server=%s db=%s driver=%s trusted=%s encrypt=%s trust_cert=%s",
+                self.server, self.database, self.driver, self.trusted, self.encrypt, self.trust_server_cert
+            )
             return None
+
 
         except Exception as e:
             logger.error("Error inesperado al conectar a la BD: %s", type(e).__name__)

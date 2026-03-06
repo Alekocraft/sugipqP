@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Cobros POP{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+
+  <!-- Encabezado -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1 text-primary">
+        <i class="fas fa-cash-register me-2"></i>Reporte de Cobros - Material POP
+      </h1>
+      <p class="text-muted small mb-0">Aprobados por mes y por oficina (según % de oficina)</p>
+    </div>
+    <a href="/reportes" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-arrow-left me-1"></i>Volver a Reportes
+    </a>
+  </div>
+
+  <!-- Filtros + Acciones -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-primary text-white py-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0 fw-semibold">
+          <i class="fas fa-filter me-1"></i>Periodo y acciones
+        </h6>
+        <div class="d-flex gap-2">
+          {% if can_export %}
+          <a class="btn btn-light btn-sm" href="/reportes/cobros-pop/export/excel?periodo={{ periodo }}">
+            <i class="fas fa-file-excel text-success me-1"></i>Excel (todas)
+          </a>
+          <a class="btn btn-light btn-sm" href="/reportes/cobros-pop/export/pdf?periodo={{ periodo }}">
+            <i class="fas fa-file-pdf text-danger me-1"></i>PDF (todas)
+          </a>
+          {% endif %}
+          {% if can_cancel %}
+          <button class="btn btn-warning btn-sm" onclick="marcarTodas('CANCELADO')">
+            <i class="fas fa-check-circle me-1"></i>Marcar todas como cancelado
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <form class="row g-3 align-items-end" method="GET" action="/reportes/cobros-pop">
+        <div class="col-sm-4 col-md-3">
+          <label class="form-label">Mes</label>
+          <input type="month" name="periodo" class="form-control" value="{{ periodo }}">
+        </div>
+        <div class="col-sm-4 col-md-3">
+          <button class="btn btn-primary w-100" type="submit">
+            <i class="fas fa-sync-alt me-1"></i>Cargar
+          </button>
+        </div>
+        <div class="col-12">
+          <div class="alert alert-info mb-0">
+            <i class="fas fa-info-circle me-1"></i>
+            Este reporte usa <strong>FechaAprobacion</strong> para asignar el cobro al mes y calcula el valor a cobrar con <strong>PorcentajeOficina</strong>.
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Resumen general -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-3 border-end">
+              <h4 class="fw-bold mb-0 text-primary">{{ total_general.total_oficinas|default(0) }}</h4>
+              <small class="text-muted">Oficinas con cobro</small>
+            </div>
+            <div class="col-md-3 border-end">
+              <h4 class="fw-bold mb-0 text-warning">{{ total_general.total_solicitudes|default(0) }}</h4>
+              <small class="text-muted">Solicitudes aprobadas</small>
+            </div>
+            <div class="col-md-3 border-end">
+              <h4 class="fw-bold mb-0 text-info">{{ total_general.total_productos|default(0) }}</h4>
+              <small class="text-muted">Productos (sumatoria por oficina)</small>
+            </div>
+            <div class="col-md-3">
+              <h4 class="fw-bold mb-0 text-success">${{ "{:,.2f}".format(total_general.total_valor_cobro|default(0)|float) }}</h4>
+              <small class="text-muted">Total a cobrar (oficinas)</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla por oficina -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-success text-white py-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0 fw-semibold">
+          <i class="fas fa-building me-1"></i>Cobro por oficina
+          <span class="badge bg-light text-dark ms-2">{{ oficinas|length }}</span>
+        </h6>
+        {% if can_export %}
+        <div class="d-flex gap-2">
+          <a class="btn btn-light btn-sm" href="/reportes/cobros-pop/export/excel?periodo={{ periodo }}&solo_estado=pendiente">
+            <i class="fas fa-file-excel text-success me-1"></i>Excel (pendientes)
+          </a>
+          <a class="btn btn-light btn-sm" href="/reportes/cobros-pop/export/excel?periodo={{ periodo }}&solo_estado=cancelado">
+            <i class="fas fa-file-excel text-success me-1"></i>Excel (cancelados)
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card-body">
+      {% if oficinas|length == 0 %}
+        <div class="alert alert-warning mb-0">
+          <i class="fas fa-exclamation-triangle me-1"></i>
+          No hay solicitudes aprobadas para el periodo <strong>{{ periodo }}</strong>.
+        </div>
+      {% else %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Oficina</th>
+              <th class="text-center">Solicitudes</th>
+              <th class="text-center">Productos</th>
+              <th class="text-end">Valor total</th>
+              <th class="text-end">Valor a cobrar</th>
+              <th class="text-center">Estado</th>
+              <th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for of in oficinas %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ of.oficina_nombre }}</div>
+                <div class="text-muted small">Cantidad total: {{ of.total_cantidad }}</div>
+              </td>
+              <td class="text-center">{{ of.total_solicitudes }}</td>
+              <td class="text-center">{{ of.total_productos }}</td>
+              <td class="text-end">${{ "{:,.2f}".format(of.total_valor_total|float) }}</td>
+              <td class="text-end fw-semibold">${{ "{:,.2f}".format(of.total_valor_cobro|float) }}</td>
+              <td class="text-center">
+                {% if (of.estado_cobro or 'PENDIENTE')|upper == 'CANCELADO' %}
+                  <span class="badge bg-success">Cancelado</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Pendiente</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#detalleOficina{{ of.oficina_id }}">
+                  <i class="fas fa-eye me-1"></i>Detalle
+                </button>
+                {% if can_cancel %}
+                  {% if (of.estado_cobro or 'PENDIENTE')|upper == 'CANCELADO' %}
+                    <button class="btn btn-outline-secondary btn-sm" onclick="cambiarEstado({{ of.oficina_id }}, 'PENDIENTE')">
+                      <i class="fas fa-undo me-1"></i>Volver a pendiente
+                    </button>
+                  {% else %}
+                    <button class="btn btn-success btn-sm" onclick="cambiarEstado({{ of.oficina_id }}, 'CANCELADO')">
+                      <i class="fas fa-check me-1"></i>Cambiar a cancelado
+                    </button>
+                  {% endif %}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- Modales de detalle por oficina -->
+  {% for of in oficinas %}
+  <div class="modal fade" id="detalleOficina{{ of.oficina_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-building me-2"></i>{{ of.oficina_nombre }} — {{ periodo }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+              {% if (of.estado_cobro or 'PENDIENTE')|upper == 'CANCELADO' %}
+                <span class="badge bg-success">Cancelado</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+              {% endif %}
+              <span class="text-muted small ms-2">Solicitudes: {{ of.total_solicitudes }} · Productos: {{ of.total_productos }}</span>
+            </div>
+            <div class="d-flex gap-2">
+              {% if can_export %}
+              <a class="btn btn-outline-success btn-sm" href="/reportes/cobros-pop/export/excel?periodo={{ periodo }}&oficina_id={{ of.oficina_id }}">
+                <i class="fas fa-file-excel me-1"></i>Excel
+              </a>
+              <a class="btn btn-outline-danger btn-sm" href="/reportes/cobros-pop/export/pdf?periodo={{ periodo }}&oficina_id={{ of.oficina_id }}">
+                <i class="fas fa-file-pdf me-1"></i>PDF
+              </a>
+              {% endif %}
+              {% if can_cancel %}
+                {% if (of.estado_cobro or 'PENDIENTE')|upper == 'CANCELADO' %}
+                  <button class="btn btn-outline-secondary btn-sm" onclick="cambiarEstado({{ of.oficina_id }}, 'PENDIENTE', true)">
+                    <i class="fas fa-undo me-1"></i>Volver a pendiente
+                  </button>
+                {% else %}
+                  <button class="btn btn-success btn-sm" onclick="cambiarEstado({{ of.oficina_id }}, 'CANCELADO', true)">
+                    <i class="fas fa-check me-1"></i>Cambiar a cancelado
+                  </button>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Producto</th>
+                  <th class="text-center">Solicitudes</th>
+                  <th class="text-center">Cantidad</th>
+                  <th class="text-end">Valor unitario</th>
+                  <th class="text-end">% Oficina</th>
+                  <th class="text-end">Valor total</th>
+                  <th class="text-end">Valor a cobrar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in of.productos %}
+                <tr>
+                  <td class="fw-semibold">{{ p.material_nombre }}</td>
+                  <td class="text-center">{{ p.num_solicitudes }}</td>
+                  <td class="text-center">{{ p.cantidad_total }}</td>
+                  <td class="text-end">${{ "{:,.2f}".format(p.valor_unitario|float) }}</td>
+                  <td class="text-end">{{ "{:.2f}".format(p.porcentaje_oficina|float) }}%</td>
+                  <td class="text-end">${{ "{:,.2f}".format(p.valor_total|float) }}</td>
+                  <td class="text-end fw-semibold">${{ "{:,.2f}".format(p.valor_cobro_oficina|float) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr class="table-light">
+                  <th colspan="5" class="text-end">Totales</th>
+                  <th class="text-end">${{ "{:,.2f}".format(of.total_valor_total|float) }}</th>
+                  <th class="text-end">${{ "{:,.2f}".format(of.total_valor_cobro|float) }}</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<script>
+  async function cambiarEstado(oficinaId, estado, desdeModal=false) {
+    try {
+      const resp = await fetch('/reportes/cobros-pop/estado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          periodo: '{{ periodo }}',
+          oficina_id: oficinaId,
+          estado: estado
+        })
+      });
+      const data = await resp.json();
+      if (!data.success) {
+        alert(data.message || 'No se pudo actualizar el estado');
+        return;
+      }
+      // Recargar para reflejar totales/estados
+      window.location.href = `/reportes/cobros-pop?periodo={{ periodo }}`;
+    } catch (e) {
+      alert('Error de red al actualizar el estado');
+    }
+  }
+
+  async function marcarTodas(estado) {
+    if (!confirm('¿Seguro que desea actualizar el estado de todas las oficinas con cobro para este mes?')) return;
+    try {
+      const resp = await fetch('/reportes/cobros-pop/estado-todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ periodo: '{{ periodo }}', estado })
+      });
+      const data = await resp.json();
+      if (!data.success) {
+        alert(data.message || 'No se pudo actualizar el estado');
+        return;
+      }
+      window.location.href = `/reportes/cobros-pop?periodo={{ periodo }}`;
+    } catch (e) {
+      alert('Error de red al actualizar estados');
+    }
+  }
+</script>
+
+{% endblock %}

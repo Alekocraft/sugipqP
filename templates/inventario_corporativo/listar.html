@@ -3,154 +3,427 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario_corporativo.css') }}">
+<style>
+  /* Mejoras visuales sin tocar funcionalidades backend */
+  .page-title-wrap { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+  .page-subtitle { margin:0; color:#6c757d; }
+  .kpi-card h5 { margin:0; font-size:.95rem; color:#6c757d; }
+  .kpi-card h3 { margin:6px 0 0; font-weight:700; }
+  .kpi-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(13,110,253,.08); color:#0d6efd; }
+  .filters-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+  .filters-left { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .filters-right { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .table thead th { position: sticky; top: 0; z-index: 1; background: var(--bs-body-bg); }
+  .table td, .table th { vertical-align: middle; }
+  .sort-btn { border:0; background:transparent; padding:0; color:inherit; display:inline-flex; align-items:center; gap:6px; }
+  .sort-btn:hover { text-decoration: underline; }
+  .muted-small { color:#6c757d; font-size:.85rem; }
+  .pill { border-radius:999px; padding:.25rem .6rem; font-size:.8rem; }
+  .badge-soft-warning { background: rgba(255,193,7,.18); color:#856404; }
+  .badge-soft-success { background: rgba(25,135,84,.16); color:#0f5132; }
+  .badge-soft-info { background: rgba(13,202,240,.16); color:#055160; }
+  .empty-state { padding:28px 12px; }
+  .empty-state i { font-size:34px; opacity:.55; }
+  .table-actions .btn { min-width:34px; }
+  .table-actions .btn i { pointer-events:none; }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1 class="text-primary">Inventario Corporativo</h1>
-            <p>Productos cargados: {{ total_productos }}</p>
+
+  <!-- Encabezado -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="page-title-wrap">
+        <div>
+          <h1 class="text-primary mb-1">Inventario Corporativo</h1>
+          <p class="page-subtitle">
+            Productos cargados:
+            <strong id="totalProductosHeader">{{ total_productos }}</strong>
+            <span class="mx-2">•</span>
+            <span class="muted-small">Gestiona, consulta y exporta el inventario.</span>
+          </p>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-file-excel"></i> Exportar
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="/inventario-corporativo/exportar/excel/todo">
-                        <i class="fas fa-table"></i> Todo el inventario
-                    </a></li>
-                </ul>
-            </div>
-            {% if puede_gestionar_inventario %}
-            <a href="{{ url_for('inventario_corporativo.crear_inventario_corporativo') }}" class="btn btn-primary ms-2">
-                <i class="fas fa-plus"></i> Nuevo Producto
-            </a>
-            {% endif %}
+
+        <div class="text-end">
+          <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-file-excel me-1"></i> Exportar
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item" href="/inventario-corporativo/exportar/excel/todo">
+                  <i class="fas fa-table me-2"></i> Todo el inventario
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {% if puede_gestionar_inventario %}
+          <a href="{{ url_for('inventario_corporativo.crear_inventario_corporativo') }}" class="btn btn-primary ms-2">
+            <i class="fas fa-plus me-1"></i> Nuevo Producto
+          </a>
+          {% endif %}
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3">
+      <div class="card kpi-card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <h5>Total Productos</h5>
+            <h3 id="kpiTotal">{{ total_productos }}</h3>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-boxes"></i></div>
+        </div>
+      </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5>Total Productos</h5>
-                    <h3>{{ total_productos }}</h3>
-                </div>
-            </div>
+    <div class="col-md-3 mb-3">
+      <div class="card kpi-card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <h5>Valor Total</h5>
+            <h3 id="kpiValor">${{ "{:,.0f}".format(valor_total_inventario) }}</h3>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5>Valor Total</h5>
-                    <h3>${{ "{:,.0f}".format(valor_total_inventario) }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5>Stock Bajo</h5>
-                    <h3>{{ productos_bajo_stock }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5>Asignables</h5>
-                    <h3>{{ productos_asignables }}</h3>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Codigo</th>
-                            <th>Producto</th>
-                            <th>Categoria</th>
-                            <th>Valor</th>
-                            <th>Stock</th>
-                            {% if puede_ver_acciones_inventario %}
-                            <th>Acciones</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for producto in productos %}
-                        <tr>
-                            <td><strong>{{ producto.codigo_unico }}</strong></td>
-                            <td>{{ producto.nombre }}</td>
-                            <td>{{ producto.categoria }}</td>
-                            <td>${{ "{:,.0f}".format(producto.valor_unitario) }}</td>
-                            <td>
-                                <span class="badge {% if producto.cantidad <= (producto.cantidad_minima or 5) %}bg-warning{% else %}bg-success{% endif %}">
-                                    {{ producto.cantidad }} u
-                                </span>
-                            </td>
-                            {% if puede_ver_acciones_inventario %}
-                            <td>
-                                <a href="{{ url_for('inventario_corporativo.ver_inventario_corporativo', producto_id=producto.id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ url_for('inventario_corporativo.editar_inventario_corporativo', producto_id=producto.id) }}" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% if producto.es_asignable %}
-                                <a href="{{ url_for('inventario_corporativo.asignar_inventario_corporativo', producto_id=producto.id) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-share"></i>
-                                </a>
-                                {% endif %}
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="{% if puede_ver_acciones_inventario %}6{% else %}5{% endif %}" class="text-center text-muted py-4">
-                                No hay productos registrados
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="col-md-3 mb-3">
+      <div class="card kpi-card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <h5>Stock Bajo</h5>
+            <h3 id="kpiBajo">{{ productos_bajo_stock }}</h3>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
         </div>
+      </div>
     </div>
+
+    <div class="col-md-3 mb-3">
+      <div class="card kpi-card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <h5>Asignables</h5>
+            <h3 id="kpiAsignables">{{ productos_asignables }}</h3>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-random"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista -->
+  <div class="card">
+    <div class="card-body">
+
+      <!-- Barra de filtros (CLIENT SIDE) -->
+      <div class="filters-bar mb-3">
+        <div class="filters-left">
+          <div class="input-group" style="min-width: 280px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input id="txtBuscar" type="text" class="form-control" placeholder="Buscar por código, producto o categoría...">
+            <button id="btnLimpiar" class="btn btn-outline-secondary" type="button" title="Limpiar">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <select id="selCategoria" class="form-select" style="min-width: 220px;">
+            <option value="">Todas las categorías</option>
+          </select>
+
+          <div class="form-check ms-1">
+            <input class="form-check-input" type="checkbox" value="1" id="chkStockBajo">
+            <label class="form-check-label" for="chkStockBajo">Solo stock bajo</label>
+          </div>
+
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="1" id="chkAsignables">
+            <label class="form-check-label" for="chkAsignables">Solo asignables</label>
+          </div>
+        </div>
+
+        <div class="filters-right">
+          <span class="muted-small" id="lblConteo">Mostrando 0</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped align-middle" id="tablaInventario">
+          <thead>
+            <tr>
+              <th><button class="sort-btn" type="button" data-sort="codigo">Código <i class="fas fa-sort"></i></button></th>
+              <th><button class="sort-btn" type="button" data-sort="producto">Producto <i class="fas fa-sort"></i></button></th>
+              <th><button class="sort-btn" type="button" data-sort="categoria">Categoría <i class="fas fa-sort"></i></button></th>
+              <th><button class="sort-btn" type="button" data-sort="valor">Valor <i class="fas fa-sort"></i></button></th>
+              <th><button class="sort-btn" type="button" data-sort="stock">Stock <i class="fas fa-sort"></i></button></th>
+              {% if puede_ver_acciones_inventario %}
+              <th>Acciones</th>
+              {% endif %}
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for producto in productos %}
+            <tr
+              data-id="{{ producto.id }}"
+              data-codigo="{{ producto.codigo_unico }}"
+              data-producto="{{ producto.nombre }}"
+              data-categoria="{{ producto.categoria }}"
+              data-valor="{{ producto.valor_unitario }}"
+              data-stock="{{ producto.cantidad }}"
+              data-minimo="{{ producto.cantidad_minima or 5 }}"
+              data-asignable="{{ 1 if producto.es_asignable else 0 }}"
+            >
+              <td>
+                <strong>{{ producto.codigo_unico }}</strong>
+                {% if producto.es_asignable %}
+                  <span class="pill badge-soft-info ms-2" title="Este producto se puede asignar">
+                    <i class="fas fa-share me-1"></i> Asignable
+                  </span>
+                {% endif %}
+              </td>
+
+              <td>{{ producto.nombre }}</td>
+
+              <td>
+                <span class="pill badge-soft-success">{{ producto.categoria }}</span>
+              </td>
+
+              <td>${{ "{:,.0f}".format(producto.valor_unitario) }}</td>
+
+              <td>
+                {% set minimo = producto.cantidad_minima or 5 %}
+                {% if producto.cantidad <= minimo %}
+                  <span class="pill badge-soft-warning" title="Bajo: mínimo {{ minimo }}">
+                    <i class="fas fa-exclamation-triangle me-1"></i> {{ producto.cantidad }} u
+                  </span>
+                {% else %}
+                  <span class="pill badge-soft-success" title="OK: mínimo {{ minimo }}">
+                    <i class="fas fa-check-circle me-1"></i> {{ producto.cantidad }} u
+                  </span>
+                {% endif %}
+              </td>
+
+              {% if puede_ver_acciones_inventario %}
+              <td class="table-actions">
+                <a href="{{ url_for('inventario_corporativo.ver_inventario_corporativo', producto_id=producto.id) }}"
+                   class="btn btn-sm btn-primary" title="Ver detalle" data-bs-toggle="tooltip">
+                  <i class="fas fa-eye"></i>
+                </a>
+
+                <a href="{{ url_for('inventario_corporativo.editar_inventario_corporativo', producto_id=producto.id) }}"
+                   class="btn btn-sm btn-warning" title="Editar" data-bs-toggle="tooltip">
+                  <i class="fas fa-edit"></i>
+                </a>
+
+                {% if producto.es_asignable %}
+                <a href="{{ url_for('inventario_corporativo.asignar_inventario_corporativo', producto_id=producto.id) }}"
+                   class="btn btn-sm btn-info" title="Asignar" data-bs-toggle="tooltip">
+                  <i class="fas fa-share"></i>
+                </a>
+                {% endif %}
+              </td>
+              {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="{% if puede_ver_acciones_inventario %}6{% else %}5{% endif %}" class="text-center text-muted py-4">
+                <div class="empty-state">
+                  <i class="fas fa-box-open d-block mb-2"></i>
+                  No hay productos registrados
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('modalInventarioCorporativo');
-    if (modal) {
-        modal.addEventListener('show.bs.modal', function () {
-            fetch('{{ url_for("inventario_corporativo.api_estadisticas_inventario") }}')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('total-productos').textContent = data.total_productos || 0;
-                    document.getElementById('valor-total').textContent = '$' + (data.valor_total || 0).toLocaleString();
-                    document.getElementById('stock-bajo').textContent = data.stock_bajo || 0;
+document.addEventListener('DOMContentLoaded', function () {
+  const table = document.getElementById('tablaInventario');
+  if (!table) return;
 
-                    const sedeEl = document.getElementById('productos-sede');
-                    const oficinasEl = document.getElementById('productos-oficinas');
-                    if (sedeEl) sedeEl.textContent = data.productos_sede || 0;
-                    if (oficinasEl) oficinasEl.textContent = data.productos_oficinas || 0;
-                })
-                .catch(error => {
-                    console.error('Error cargando estadisticas:', error);
-                    document.getElementById('total-productos').textContent = '0';
-                    document.getElementById('valor-total').textContent = '$0';
-                    document.getElementById('stock-bajo').textContent = '0';
-                });
-        });
+  const tbody = table.querySelector('tbody');
+  const txtBuscar = document.getElementById('txtBuscar');
+  const btnLimpiar = document.getElementById('btnLimpiar');
+  const selCategoria = document.getElementById('selCategoria');
+  const chkStockBajo = document.getElementById('chkStockBajo');
+  const chkAsignables = document.getElementById('chkAsignables');
+  const lblConteo = document.getElementById('lblConteo');
+
+  const totalHeader = document.getElementById('totalProductosHeader');
+  const kpiTotal = document.getElementById('kpiTotal');
+
+  // ---------- 1) DEDUPLICAR FILAS (evita repetidos aunque backend los mande) ----------
+  // Clave: data-id si existe, si no data-codigo.
+  function dedupeRows() {
+    const seen = new Set();
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.forEach(row => {
+      // evita tocar fila "no hay productos"
+      const codigo = (row.dataset && row.dataset.codigo) ? row.dataset.codigo.trim() : '';
+      const id = (row.dataset && row.dataset.id) ? row.dataset.id.trim() : '';
+      if (!codigo && !id) return;
+
+      const key = id || codigo;
+      if (seen.has(key)) {
+        row.remove();
+      } else {
+        seen.add(key);
+      }
+    });
+
+    // Actualizar contadores (si backend venía duplicado, aquí queda bien)
+    const uniqueCount = Array.from(tbody.querySelectorAll('tr')).filter(r => (r.dataset.id || r.dataset.codigo)).length;
+    if (totalHeader) totalHeader.textContent = uniqueCount.toLocaleString();
+    if (kpiTotal) kpiTotal.textContent = uniqueCount.toLocaleString();
+  }
+
+  // ---------- 2) CARGAR CATEGORÍAS (si salía en blanco, aquí queda siempre) ----------
+  function loadCategoriasFromTable() {
+    if (!selCategoria) return;
+    const cats = new Set();
+    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+      const cat = (row.dataset && row.dataset.categoria) ? row.dataset.categoria.trim() : '';
+      if (cat) cats.add(cat);
+    });
+
+    // limpiar y reconstruir
+    const keepFirst = selCategoria.querySelector('option[value=""]');
+    selCategoria.innerHTML = '';
+    if (keepFirst) selCategoria.appendChild(keepFirst);
+    else {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'Todas las categorías';
+      selCategoria.appendChild(opt);
     }
+
+    Array.from(cats).sort((a,b)=>a.localeCompare(b,'es')).forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      selCategoria.appendChild(opt);
+    });
+  }
+
+  // ---------- 3) FILTRAR (buscar + categoría + stock bajo + asignables) ----------
+  function isStockBajo(row) {
+    const stock = parseInt(row.dataset.stock || '0', 10);
+    const minimo = parseInt(row.dataset.minimo || '5', 10);
+    return stock <= minimo;
+  }
+
+  function applyFilters() {
+    const q = (txtBuscar ? txtBuscar.value : '').trim().toLowerCase();
+    const catSel = (selCategoria ? selCategoria.value : '').trim();
+    const onlyBajo = chkStockBajo ? chkStockBajo.checked : false;
+    const onlyAsignables = chkAsignables ? chkAsignables.checked : false;
+
+    let visible = 0;
+    let total = 0;
+
+    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+      const hasData = (row.dataset && (row.dataset.id || row.dataset.codigo));
+      if (!hasData) return; // fila empty state
+      total++;
+
+      const codigo = (row.dataset.codigo || '').toLowerCase();
+      const prod = (row.dataset.producto || '').toLowerCase();
+      const cat = (row.dataset.categoria || '');
+
+      const matchesText = !q || (codigo.includes(q) || prod.includes(q) || cat.toLowerCase().includes(q));
+      const matchesCat = !catSel || cat === catSel;
+      const matchesBajo = !onlyBajo || isStockBajo(row);
+      const matchesAsign = !onlyAsignables || (row.dataset.asignable === '1');
+
+      const show = matchesText && matchesCat && matchesBajo && matchesAsign;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    if (lblConteo) {
+      lblConteo.textContent = `Mostrando ${visible.toLocaleString()} de ${total.toLocaleString()}`;
+    }
+  }
+
+  // ---------- 4) ORDENAR ----------
+  let sortState = { key: null, dir: 'asc' };
+
+  function getSortValue(row, key) {
+    if (key === 'valor') return parseFloat(row.dataset.valor || '0');
+    if (key === 'stock') return parseFloat(row.dataset.stock || '0');
+    // texto
+    return (row.dataset[key] || '').toString().toLowerCase();
+  }
+
+  function sortBy(key) {
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => (r.dataset.id || r.dataset.codigo));
+
+    // toggle dirección
+    if (sortState.key === key) sortState.dir = (sortState.dir === 'asc') ? 'desc' : 'asc';
+    else { sortState.key = key; sortState.dir = 'asc'; }
+
+    rows.sort((a,b) => {
+      const va = getSortValue(a, key);
+      const vb = getSortValue(b, key);
+
+      if (typeof va === 'number' && typeof vb === 'number') {
+        return sortState.dir === 'asc' ? (va - vb) : (vb - va);
+      }
+      return sortState.dir === 'asc'
+        ? va.localeCompare(vb, 'es')
+        : vb.localeCompare(va, 'es');
+    });
+
+    // reinsertar filas en nuevo orden (sin romper handlers)
+    rows.forEach(r => tbody.appendChild(r));
+    applyFilters();
+  }
+
+  // ---------- 5) TOOLTIPs ----------
+  function initTooltips() {
+    if (!window.bootstrap) return;
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  }
+
+  // Eventos
+  if (txtBuscar) txtBuscar.addEventListener('input', applyFilters);
+  if (btnLimpiar) btnLimpiar.addEventListener('click', () => { txtBuscar.value=''; applyFilters(); txtBuscar.focus(); });
+  if (selCategoria) selCategoria.addEventListener('change', applyFilters);
+  if (chkStockBajo) chkStockBajo.addEventListener('change', applyFilters);
+  if (chkAsignables) chkAsignables.addEventListener('change', applyFilters);
+
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.addEventListener('click', () => sortBy(btn.dataset.sort));
+  });
+
+  // Init
+  dedupeRows();
+  loadCategoriasFromTable();
+  initTooltips();
+  applyFilters();
 });
 </script>
 {% endblock %}

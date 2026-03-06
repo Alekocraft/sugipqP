@@ -1,6 +1,6 @@
 ESTRUCTURA DEL PROYECTO FLASK 
 ============================= 
-Fecha: Thu 02/05/2026 16:58:21.32 
+Fecha: Mon 02/16/2026 14:15:51.89 
 Directorio actual: C:\Users\sinventarios\source\repos\sugipq_prod 
  
 [ARCHIVOS PRINCIPALES .PY] 
@@ -8,13 +8,13 @@ Directorio actual: C:\Users\sinventarios\source\repos\sugipq_prod
 app.py 
 certificado_route.py 
 database.py 
+notification_service.py 
 solicitudes.py 
 blueprints\api.py 
 blueprints\aprobacion.py 
 blueprints\aprobadores.py 
 blueprints\auth.py 
 blueprints\confirmacion_asignaciones.py 
-blueprints\helpers.py 
 blueprints\inventario_corporativo.py 
 blueprints\materiales.py 
 blueprints\novedades_model.py 
@@ -46,6 +46,7 @@ templates\materials\__init__.py
 templates\reportes\__init__.py 
 templates\solicitudes\__init__.py 
 utils\auth.py 
+utils\database.py 
 utils\filters.py 
 utils\helpers.py 
 utils\initialization.py 
@@ -117,7 +118,6 @@ static\css\login.css
  
 [ARCHIVOS DE CONFIGURACION] 
 --------------------------- 
-requirements.txt 
 .env 
  
 [ARCHIVOS DE ENTORNO] 
@@ -129,8 +129,12 @@ requirements.txt
 ------------------ 
 logs\app.log 
 logs\ldap.log 
+logs\service.err.log 
+logs\service.out.log 
 logs\app.log 
 logs\ldap.log 
+logs\service.err.log 
+logs\service.out.log 
  
 [ARCHIVOS LOG EN RAIZ] 
 ---------------------- 
@@ -151,14 +155,15 @@ logs\ldap.log
  
 Resumen: 
 --------- 
-Archivos .py: 48 
+Archivos .py: 49 
 Archivos HTML: 47 
 Archivos CSS: 5 
 Archivos JS: 0 
 Archivos de entorno: 2 
-Archivos de logs: 4 
+Archivos de logs: 8 
 Carpetas (sin entornos virtuales): 11 
  
 [ENTORNOS VIRTUALES EXCLUIDOS] 
 ------------------------------ 
+venv 
  

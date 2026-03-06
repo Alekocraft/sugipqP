@@ -41,8 +41,8 @@
             <input class="form-control" type="number" id="cantidad_minima" name="cantidad_minima" min="0" step="1" required />
           </div>
           <div class="col-md-9">
-            <label class="form-label" for="imagen">Imagen (opcional)</label>
-            <input class="form-control" type="file" id="imagen" name="imagen" accept="image/png,image/jpeg,image/webp,image/gif" />
+            <label class="form-label" for="imagen">Imagen</label>
+            <input class="form-control" type="file" id="imagen" name="imagen" accept="image/png,image/jpeg,image/webp,image/gif" required />
             <div class="form-text">Formatos permitidos: png, jpg, jpeg, webp, gif.</div>
           </div>
         </div>
@@ -65,14 +65,14 @@
 <script>
   
   function getCsrfToken() {
-    const meta = document.querySelector('meta[name=\"csrf-token\"]');
+    const meta = document.querySelector('meta[name="csrf-token"]');
     if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
-    const inp = document.querySelector('input[name=\"csrf_token\"]');
+    const inp = document.querySelector('input[name="csrf_token"]');
     if (inp && inp.value) return inp.value;
     return '';
   }
 
-function safeNavigate(path) {
+  function safeNavigate(path) {
     try {
       if (typeof path !== 'string') return;
       const dest = path.trim();
@@ -109,6 +109,13 @@ function safeNavigate(path) {
 
     form.addEventListener('submit', async function (ev) {
       ev.preventDefault();
+
+      // Validar todos los campos requeridos (incluyendo la imagen)
+      if (!form.checkValidity()) {
+        form.reportValidity(); // Muestra los mensajes de error del navegador
+        return;
+      }
+
       const fd = new FormData(form);
 
       try {
@@ -116,7 +123,12 @@ function safeNavigate(path) {
           method: 'POST',
           body: fd,
           credentials: 'same-origin',
-          headers: (function(){ const h = { 'X-Requested-With': 'XMLHttpRequest' }; const tkn = getCsrfToken(); if (tkn) h['X-CSRFToken'] = tkn; return h; })()
+          headers: (function(){ 
+            const h = { 'X-Requested-With': 'XMLHttpRequest' }; 
+            const tkn = getCsrfToken(); 
+            if (tkn) h['X-CSRFToken'] = tkn; 
+            return h; 
+          })()
         });
 
         let data = null;

@@ -1,0 +1,900 @@
+SECURITY VALIDATION REPORT
+================================================================================
+Root: C:\Users\sinventarios\source\repos\sugipq_prod
+Total findings: 173
+
+Resumen por regla:
+  -  69  CWE-209: Avoid sensitive information exposure through error messages
+  -  42  CWE-79: XSS (DOM sink usage)
+  -  32  CWE-117: Unvalidated untrusted input in log
+  -  16  CWE-532: Avoid exposing sensitive information through log
+  -  11  Kiuwan: Avoid unused local variable (pattern-based)
+  -   2  Parser
+  -   1  CWE-20: Form validation disabled (novalidate)
+
+Resumen por archivo (top 20):
+  -  29  blueprints/reportes.py
+  -  11  models/usuarios_model.py
+  -  10  utils/ldap_auth.py
+  -   8  templates/inventario_corporativo/listar_con_filtros.html
+  -   7  blueprints/novedades_model.py
+  -   7  database.py
+  -   6  blueprints/auth.py
+  -   6  templates/solicitudes/crear.html
+  -   5  models/oficinas_model.py
+  -   5  templates/materials/historial_material.html
+  -   5  templates/reportes/novedades.html
+  -   4  app.py
+  -   4  blueprints/oficinas.py
+  -   4  templates/inventario_corporativo/crear.html
+  -   4  templates/solicitudes/listar.html
+  -   4  templates/solicitudes/solicitudes.html
+  -   4  utils/database.py
+  -   3  models/materiales_model.py
+  -   3  models/solicitudes_model.py
+  -   3  notification_service.py
+
+Detalle:
+--------------------------------------------------------------------------------
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/aprobadores.py:30
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >0030:             logger.info(f"Se encontraron {len(aprobadores)} aprobadores")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/auth.py:38
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0038:     logger.info(
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/auth.py:42
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0042:     logger.info(
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/oficinas.py:41
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >0041:         logger.info(f"✅ Oficinas obtenidas: {len(oficinas) if oficinas else 0}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/oficinas.py:94
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >0094:                 logger.info(f"✅ Oficina creada: {nombre} (ID: {oficina_id})")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/oficinas.py:140
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >0140:                 logger.info(f"✅ Oficina actualizada: ID {oficina_id}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/oficinas.py:177
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >0177:             logger.info(f"✅ Oficina eliminada: ID {oficina_id}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:1816
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >1816:         logger.info(f"🔍 DEBUG: Buscando solicitudes para MaterialId = {material_id_int}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:1818
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >1818:         logger.info(f"🔍 DEBUG: Material obtenido: {material.get('nombre', 'N/A')}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:1847
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >1847:             logger.info(f"✅ DEBUG: Se encontraron {len(rows)} solicitudes en la BD")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:1853
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >1853:                 logger.info(f"🔍 DEBUG: ¿MaterialId {material_id_int} existe en Materiales? {count_mat > 0}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:1858
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >1858:                 logger.info(f"🔍 DEBUG: Solicitudes directas encontradas: {count_sol}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:1876
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >1876:                 logger.info(f"  📋 Solicitud {row[0]}: Estado={estado_nombre}, Cantidad={row[5]}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:1889
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >1889:         logger.info(f"DEBUG: Total solicitudes = {total_solicitudes}, Aprobadas = {solicitudes_aprobadas}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:2804
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >2804:                 logger.info(f"DEBUG - Producto {producto['ProductoId']}: Estado='{producto.get('EstadoAsignacion')}', AsignacionId={producto.get('AsignacionId')}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  blueprints/reportes.py:2820
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >2820:         logger.info(f"DEBUG - Total confirmados: {total_confirmados}, Total asignados: {total_asignados}")
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  database.py:72
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0072:             logger.info(
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  database.py:83
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0083:             logger.error("BD OperationalError: %s | args=%s", str(e), getattr(e, "args", None))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  database.py:84
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0084:             logger.error(
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  models/usuarios_model.py:278
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0278:                 logger.info("❌ Usuario no encontrado en BD local: %s", _mask(usuario))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  models/usuarios_model.py:283
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0283:                 logger.info("❌ Usuario inactivo en BD local: %s", _mask(usuario))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  models/usuarios_model.py:290
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0290:                 logger.info("🔄 Usuario marcado como LDAP, se omite validación local: %s", _mask(usuario))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  models/usuarios_model.py:294
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0294:                 logger.info("⚠️ Usuario sin hash local: %s", _mask(usuario))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  models/usuarios_model.py:312
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0312:                 logger.warning("⚠️ Hash inválido/no compatible en BD local: %s (ref=%s)", _mask(usuario), sanitizar_log_text(ref))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  models/usuarios_model.py:316
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0316:                 logger.info("❌ Contraseña local inválida: %s", _mask(usuario))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  models/usuarios_model.py:319
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0319:             logger.info("✅ Login local exitoso: %s", _mask(usuario))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  utils/database.py:113
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0113:             logger.info(
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  utils/database.py:120
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0120:             logger.exception("Error conectando a SQL Server (Servidor=%s | BD=%s)", self.server, self.database)
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  utils/helpers.py:96
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0096:         logger.warning("Formulario con %s errores de validación", len(form.errors))
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  utils/helpers.py:110
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0110:     logger.error("No se pudo generar código único después de %s intentos", max_attempts)
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  utils/helpers.py:132
+  logger.* pasa argumento no sanitizado a formato %s/{}. Envolvelo con sanitizar_log_text(...) o sanitizador específico.
+  >0132:         logger.info("Validación de stock fallida: solicitado=%s, disponible=%s", cantidad_solicitada, stock_disponible)
+
+[ERROR] CWE-117: Unvalidated untrusted input in log
+  utils/permissions.py:82
+  logger.* usa f-string con interpolación NO sanitizada. Usa sanitizar_log_text(...) / sanitizar_username(...) o evita interpolar input.
+  >0082:         logger.warning(f"Rol no reconocido: {role_raw}. Usando versión normalizada: {role_normalized}")
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  app.py:1082
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1082:         if str(_dbg).strip().lower() in ('1', 'true', 'yes', 'y', 'si'):
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  app.py:1097
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1097:     debug_mode = (env_name != 'production') and (str(debug_env).strip().lower() in ('1', 'true', 'yes', 'y', 'si'))
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/auth.py:289
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0289:                 sanitizar_log_text(type(e).__name__),
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/auth.py:349
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0349:                 return str(v).strip().lower() in ("1", "true", "yes", "y", "si", "on")
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/auth.py:473
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0473:                 sanitizar_log_text(type(e).__name__),
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/confirmacion_asignaciones.py:123
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0123:                 logger.error("❌ Falló el reintento de render_template('%s') después de convertir a UTF-8: %s", sanitizar_log_text(template_name), sanitizar_log_text(str(e2)))
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/novedades_model.py:90
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0090:             logger.error("Error obteniendo novedades: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/novedades_model.py:154
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0154:             logger.error("Error obteniendo novedad %s: [error](%s)", novedad_id, type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/novedades_model.py:196
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0196:             logger.error("Error creando novedad: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/novedades_model.py:226
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0226:             logger.error("Error actualizando novedad: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/novedades_model.py:263
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0263:             logger.error("Error obteniendo estadísticas: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/novedades_model.py:320
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0320:             logger.error("Error obteniendo novedades de solicitud %s: [error](%s)", solicitud_id, type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:249
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0249:                 if str(oficina_solicitud_id) != str(filtro_oficina):
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:273
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0273:                             fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:289
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0289:                             fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:435
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0435:                 if str(oficina_solicitud_id) != str(filtro_oficina):
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:458
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0458:                             fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:473
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0473:                             fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:790
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0790:         logger.error("Error interno (%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:989
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0989:         logger.error("Error interno (%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1345
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1345:                     formatted_row.append(str(value) if value is not None else 'N/A')
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1353
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1353:         data.append(['Total Materiales:', str(total_materiales), '', '', '', '', '', '', ''])
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1526
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1526:             data.append([str(value) if value is not None else '' for value in row])
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1534
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1534:         data.append(['Total Préstamos:', str(total_prestamos), '', '', '', '', '', '', ''])
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1535
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1535:         data.append(['Préstamos Activos:', str(prestamos_activos), '', '', '', '', '', '', ''])
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1709
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1709:                     formatted_row.append(str(value) if value is not None else '')
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1716
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >1716:         data.append(['Total Materiales:', str(total_materiales), '', '', '', '', '', '', ''])
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1879
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >1879:             logger.error("Error interno (%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:1898
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >1898:         logger.error("Error interno (%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:2213
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >2213:                     fecha_str = str(fecha_creacion) if fecha_creacion else 'N/A'
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:2241
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >2241:                     fecha_str = str(fecha) if fecha else 'N/A'
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/reportes.py:2831
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >2831:         logger.error("Error interno (%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/usuarios.py:38
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0038:         s = str(value).strip()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  blueprints/usuarios.py:106
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0106:         s = str(text)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  config/ldap_config.py:17
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0017:     raw = str(raw).strip().lower()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  database.py:79
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0079:             logger.error("Error de interfaz ODBC al conectar a la BD: %s", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  database.py:83
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0083:             logger.error("BD OperationalError: %s | args=%s", str(e), getattr(e, "args", None))
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  database.py:92
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0092:             logger.error("Error inesperado al conectar a la BD: %s", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/cobros_pop_model.py:115
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0115:         oficina_ids = [int(x) for x in (oficina_ids or []) if str(x).strip().isdigit()]
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/materiales_model.py:146
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0146:             ruta_imagen_final = str(ruta_imagen).strip() if ruta_imagen else None
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/materiales_model.py:173
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0173:                 str(nombre), 
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/materiales_model.py:177
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0177:                 str(usuario_creador), 
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/oficinas_model.py:38
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0038:             logger.info("❌ Error al obtener oficinas: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/oficinas_model.py:61
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0061:             logger.info("❌ Error al obtener oficina por ID: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/oficinas_model.py:88
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0088:             logger.info("❌ Error al obtener id por nombre: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/oficinas_model.py:119
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0119:             logger.info("❌ Error obteniendo oficina por nombre: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/oficinas_model.py:149
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0149:             logger.info("❌ Error obteniendo oficina principal: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/prestamos_model.py:12
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0012:             s = "" if value is None else str(value)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/solicitudes_model.py:137
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0137:             err = str(e)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/solicitudes_model.py:165
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0165:             err = str(e)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/solicitudes_model.py:443
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0443:                 elif not str(estado).isdigit():
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/usuarios_model.py:304
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0304:                 stored_hash_bytes = str(stored_hash).encode("utf-8", errors="ignore")
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  models/usuarios_model.py:306
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0306:             pw_bytes = password if isinstance(password, (bytes, bytearray)) else str(password).encode("utf-8", errors="ignore")
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  notification_service.py:239
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0239:                     return str(c)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  notification_service.py:878
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0878:             return html.escape("" if value is None else str(value), quote=True)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  services/notification_service.py:239
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0239:                     return str(c)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  services/notification_service.py:872
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0872:             return html.escape("" if value is None else str(value), quote=True)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/auth.py:29
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0029:     target_roles = [str(r).strip().lower() for r in roles if r is not None]
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/auth.py:65
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0065:             if roles and user_role not in [str(r).strip().lower() for r in roles]:
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/auth.py:94
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0094:         allowed = module_norm in [str(x).strip().lower() for x in permissions]
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/database.py:38
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0038:             trusted = str(trusted_raw).strip().lower() in ("yes", "true", "1")
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/filters.py:45
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0045:             usuario_oficina_id = str(oficina_id_usuario)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/filters.py:84
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0084:         return str(oficina_id) == str(oficina_id_usuario)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/ldap_auth.py:88
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0088:                 return str(v)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/ldap_auth.py:284
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0284:                 msg = str(ve).lower()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/ldap_auth.py:370
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0370:         password = "" if password is None else str(password)
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/ldap_auth.py:466
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0466:                     msg = str(ve).lower()
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/ldap_auth.py:611
+  Fuga de detalle técnico detectada en error/log: str(e)
+  >0611:                         groups_val = [str(member_of)]
+
+[ERROR] CWE-209: Avoid sensitive information exposure through error messages
+  utils/permissions.py:100
+  Fuga de detalle técnico detectada en error/log: type(e).__name__
+  >0100:             logger.error("Error importando configuraciones: [error](%s)", type(e).__name__)
+
+[ERROR] CWE-20: Form validation disabled (novalidate)
+  templates/confirmacion/confirmar.html:110
+  Encontrado atributo 'novalidate' (deshabilita validación del navegador).
+  >0110:                         <form method="POST" action="" autocomplete="off" id="formConfirmacion" novalidate>
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  app.py:164
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0164: logger.info("Logging de LDAP configurado. Archivo: %s", sanitizar_log_text(ldap_log_file))
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  app.py:1064
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >1064:     logger.info("Logging de LDAP activo en: %s", sanitizar_log_text(ldap_log_file))
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  blueprints/auth.py:470
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0470:             logger.error(
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  blueprints/inventario_corporativo.py:900
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0900:         logger.error("Error LDAP buscar usuarios: [error](%s)", "error")
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  database.py:60
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0060:                     logger.error("DB_USERNAME/DB_PASSWORD son requeridos cuando DB_TRUSTED_CONNECTION=false")
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  models/confirmacion_asignaciones_model.py:30
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0030:     logger.warning("LDAP no disponible - autenticación AD deshabilitada")
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  models/usuarios_model.py:290
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0290:                 logger.info("🔄 Usuario marcado como LDAP, se omite validación local: %s", _mask(usuario))
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  models/usuarios_model.py:316
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0316:                 logger.info("❌ Contraseña local inválida: %s", _mask(usuario))
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  notification_service.py:533
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0533:                 logger.error("Token de confirmación es requerido")
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  services/notification_service.py:527
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0527:                 logger.error("Token de confirmación es requerido")
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  utils/database.py:100
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0100:                     logger.error("DB_USERNAME/DB_PASSWORD requeridos cuando DB_TRUSTED_CONNECTION=false")
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  utils/ldap_auth.py:297
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0297:         logger.error(
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  utils/ldap_auth.py:468
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0468:                         logger.warning(
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  utils/ldap_auth.py:494
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0494:         logger.error(
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  utils/ldap_auth.py:523
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0523:             logger.error("LDAP_SEARCH_BASE no configurado")
+
+[ERROR] CWE-532: Avoid exposing sensitive information through log
+  utils/ldap_auth.py:583
+  Mensaje de log contiene keywords sensibles (password/token/authorization/cookie/etc.).
+  >0583:             logger.error("❌ LDAP: Búsqueda falló: %s", sanitizar_log_text(last_error))
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/auth/login.html:206
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0206:                     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Iniciando sesión...';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/crear.html:401
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0401:     btn.innerHTML = '⏳ Registrando...';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/crear.html:433
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0433:         btn.innerHTML = originalText;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/crear.html:519
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0519:     btn.innerHTML = '⏳ Procesando...';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/crear.html:549
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0549:         btn.innerHTML = originalText;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar.html:311
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0311:     selCategoria.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:524
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0524:   if (el) el.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:532
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0532:   el.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:551
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0551:       if (term.length < 2) { ldapList.innerHTML = ''; return; }
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:556
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0556:           ldapList.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:736
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0736:     tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Cargando…</td></tr>`;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:747
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0747:         tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No hay solicitudes pendientes.</td></tr>`;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:751
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0751:       tbody.innerHTML = items.map(it => {
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/inventario_corporativo/listar_con_filtros.html:821
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0821:       tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">No se pudieron cargar las solicitudes pendientes.</td></tr>`;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/materials/crear.html:118
+  Uso de sink DOM potencialmente peligroso (\binsertAdjacentHTML\s*\().
+  >0118:         container.insertAdjacentHTML('beforeend', html);
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/materials/elemento_crear.html:77
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0077:     container.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/materials/historial_material.html:467
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0467:         tbody.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/materials/historial_material.html:595
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0595:     div.innerHTML = toastHTML;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/prestamos/crear.html:148
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0148:   container.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/prestamos/elemento_crear.html:88
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0088:     container.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/prestamos/prestamos.html:458
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0458:         div.innerHTML = toastHTML;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/reportes/historial_material.html:336
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0336:     div.innerHTML = toastHTML;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/reportes/materiales.html:384
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0384:         div.innerHTML = toastHTML;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/reportes/novedades.html:467
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0467:         tbody.innerHTML = '';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/reportes/novedades.html:595
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0595:     div.innerHTML = toastHTML;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/reportes/prestamos.html:440
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0440:         div.innerHTML = toastHTML;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/reportes/solicitudes.html:364
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0364:     div.innerHTML = toastHTML;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/crear.html:258
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0258:                 infoMaterial.innerHTML = '<span class="text-danger">No hay materiales disponibles para mostrar</span>';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/crear.html:259
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0259:                 resumenSolicitud.innerHTML = '<span>No se pueden crear solicitudes sin materiales disponibles</span>';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/crear.html:287
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0287:                 infoMaterial.innerHTML =
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/crear.html:295
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0295:                 infoMaterial.innerHTML = 'Seleccione un material para ver información detallada...';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/crear.html:306
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0306:                 resumenSolicitud.innerHTML =
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/crear.html:312
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0312:                 resumenSolicitud.innerHTML = 'Complete los campos para ver el resumen...';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/listar.html:688
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0688:                 container.innerHTML = html;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/listar.html:1008
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >1008:                 container.innerHTML = html;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/listar.html:1244
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >1244:                 container.innerHTML = html;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/solicitudes.html:688
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0688:                 container.innerHTML = html;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/solicitudes.html:1008
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >1008:                 container.innerHTML = html;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/solicitudes/solicitudes.html:1244
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >1244:                 container.innerHTML = html;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/usuarios/crear.html:320
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0320:                     contentDiv.innerHTML = html;
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/usuarios/crear.html:323
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0323:                     contentDiv.innerHTML = '<div class="alert alert-warning">No se encontraron usuarios en Active Directory</div>';
+
+[ERROR] CWE-79: XSS (DOM sink usage)
+  templates/usuarios/crear.html:329
+  Uso de sink DOM potencialmente peligroso (\binnerHTML\s*=\s*[^;]+).
+  >0329:                 document.getElementById('ldapResultsContent').innerHTML =
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/aprobadores/listar.html:171
+  Patrón conocido de variable local no usada (según reportes).
+  >0171:         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/auth/login.html:165
+  Patrón conocido de variable local no usada (según reportes).
+  >0165:                     const newState = isHidden ? 'visible' : 'oculta';
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/materials/historial_material.html:451
+  Patrón conocido de variable local no usada (según reportes).
+  >0451:     const info = tabla.page.info();
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/materials/historial_material.html:514
+  Patrón conocido de variable local no usada (según reportes).
+  >0514:         const info = tabla.page.info();
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/materials/historial_material.html:564
+  Patrón conocido de variable local no usada (según reportes).
+  >0564:         const fechaArchivo = new Date().toISOString().split('T')[0];
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/reportes/novedades.html:451
+  Patrón conocido de variable local no usada (según reportes).
+  >0451:     const info = tabla.page.info();
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/reportes/novedades.html:514
+  Patrón conocido de variable local no usada (según reportes).
+  >0514:         const info = tabla.page.info();
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/reportes/novedades.html:564
+  Patrón conocido de variable local no usada (según reportes).
+  >0564:         const fechaArchivo = new Date().toISOString().split('T')[0];
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/solicitudes/listar.html:1305
+  Patrón conocido de variable local no usada (según reportes).
+  >1305:     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/solicitudes/solicitudes.html:1305
+  Patrón conocido de variable local no usada (según reportes).
+  >1305:     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+
+[ERROR] Kiuwan: Avoid unused local variable (pattern-based)
+  templates/usuarios/gestionar.html:583
+  Patrón conocido de variable local no usada (según reportes).
+  >0583:                         const usuario = response.usuario;
+
+[ERROR] Parser
+  blueprints/novedades_model.py:1
+  No se pudo parsear el archivo Python (SyntaxError).
+
+[ERROR] Parser
+  models/novedades_model.py:1
+  No se pudo parsear el archivo Python (SyntaxError).

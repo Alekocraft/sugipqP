@@ -583,8 +583,8 @@
 // Variables globales
 let solicitudActualId = null;
 
-// Navegación segura (evita Open Redirect)
-// Navegación segura (evita Open Redirect). Solo permite rutas relativas dentro de la app.
+// Navegación segura (evita Open Redirect).
+// Solo permite rutas relativas absolutas dentro de la app ("/...").
 function safeNavigate(dest) {
     try {
         if (typeof dest !== 'string') return;
@@ -594,37 +594,20 @@ function safeNavigate(dest) {
         // Permitir solo rutas relativas absolutas de la app: "/..."
         if (!d.startsWith('/') || d.startsWith('//')) return;
 
-        // Bloquear backslashes/control chars
-        if (d.includes('\') || /[
-	]/.test(d)) return;
+        // Bloquear backslashes y caracteres de control
+        if (d.includes('\\') || /[\r\n\t]/.test(d)) return;
 
         // Lista blanca de caracteres comunes en rutas + query/hash
         if (!/^\/[A-Za-z0-9\-._~\/?#[\]@!$&'()*+,;=%]*$/.test(d)) return;
 
-        safeNavigate(d);
-    } catch (e) {
-        // no-op
-    }
-}
-else if (typeof dest === 'string') {
-            if (dest.startsWith('/') && !dest.startsWith('//')) {
-                safeNavigate(dest);
-                return;
-            }
-            url = new URL(dest, window.location.origin);
-        } else {
-            return;
-        }
-
-        if (url.origin === window.location.origin) {
-            safeNavigate(url.toString());
-        }
+        window.location.href = d;
     } catch (e) {
         // no-op
     }
 }
 
 // Función para filtrar por estado
+
 function filtrarPorEstado(estado) {
     const url = new URL(window.location.href);
     if (estado && estado !== 'todos') {

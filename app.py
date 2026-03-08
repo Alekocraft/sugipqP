@@ -409,7 +409,7 @@ except ImportError as e:
 
 # Importación condicional de blueprint de confirmaciones (NUEVO)
 try:
-    from blueprints.confirmacion_asignaciones import confirmacion_bp
+    from blueprints.confirmacion_asignaciones import confirmacion_asignaciones_bp as confirmacion_bp
     logger.info("Blueprint de confirmaciones cargado exitosamente")
 except ImportError as e:
     logger.warning("Blueprint de confirmaciones no disponible")
@@ -431,7 +431,8 @@ def check_session_timeout():
     # Rutas públicas que no requieren verificación
     public_routes = ['/login', '/logout', '/static', '/api/session-check', 
                      '/auth/login', '/auth/logout', '/auth/test-ldap',
-                     '/certificado', '/certificado/generar']  # ← AÑADIDO
+                     '/certificado', '/certificado/generar',
+                     '/confirmacion']  # ← AÑADIDO
     
     if any(request.path.startswith(route) for route in public_routes):
         return

@@ -2,6 +2,7 @@
 import logging
 import os
 import uuid
+import ipaddress
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -121,6 +122,20 @@ def get_client_info():
         'timestamp': datetime.now().isoformat(),
     }
 
+
+
+def _is_private_ip(ip: str) -> bool:
+    """Permite habilitar /auth/test-ldap en producción solo desde IPs privadas.
+
+    Evita exponer la página públicamente en internet, pero no rompe el acceso
+    interno (red 10.x/172.16-31.x/192.168.x).
+    """
+    try:
+        if not ip:
+            return False
+        return ipaddress.ip_address(ip).is_private
+    except Exception:
+        return False
 
 def _as_dict(raw):
     """Convierte salida de UsuarioModel a dict (sin asumir formato)."""
@@ -311,8 +326,10 @@ def test_ldap():
 
     # ✅ Evita exponer info LDAP en producción
     if (os.getenv('FLASK_ENV') or '').lower() == 'production':
-        return ("Not Found", 404)
-
+        # En producción, permitir SOLO desde redes privadas (intranet).
+        # Si necesitas habilitarlo fuera de intranet, hazlo explícito vía VPN.
+        if not _is_private_ip(request.remote_addr):
+            return ("Not Found", 404)
     result = None
 
     if request.method == 'POST':

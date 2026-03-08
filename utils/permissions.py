@@ -29,7 +29,6 @@ class PermissionManager:
             str: Clave normalizada del rol para búsqueda en ROLE_PERMISSIONS
         """
         if not role_raw:
-            logger.debug("Rol vacío recibido para normalización")
             return ''
 
         role = role_raw.strip().lower()
@@ -54,7 +53,6 @@ class PermissionManager:
         
         # Búsqueda directa en permisos definidos
         if role_normalized in ROLE_PERMISSIONS:
-            logger.debug(f"Rol encontrado directamente: {role_normalized}")
             return role_normalized
         
         # Búsqueda ignorando guiones bajos
@@ -62,30 +60,23 @@ class PermissionManager:
         for key in ROLE_PERMISSIONS.keys():
             key_flat = key.replace('_', '')
             if role_flat == key_flat:
-                logger.debug(f"Rol encontrado por comparación plana: {key}")
                 return key
         
         # Detección por contenido específico
         # Ahora 'admin' se mapea a 'administrador'
         if 'admin' in role_normalized:
-            logger.debug(f"Rol detectado como administrador: {role_raw}")
             return 'administrador'
         if 'lider' in role_normalized and 'invent' in role_normalized:
-            logger.debug(f"Rol detectado como líder de inventario: {role_raw}")
             return 'lider_inventario'
         if 'tesorer' in role_normalized:
-            logger.debug(f"Rol detectado como tesorería: {role_raw}")
             return 'tesoreria'
         if 'coq' in role_normalized:
-            logger.debug(f"Rol detectado como oficina COQ: {role_raw}")
             return 'oficina_coq'
 
         # Roles corporativos office-like (mismo comportamiento que oficina_coq)
         if role_normalized in ['gerencia_talento_humano', 'gerencia_comercial', 'comunicaciones', 'presidencia']:
             if role_normalized in ROLE_PERMISSIONS:
-                logger.debug(f"Rol detectado como office-like: {role_raw}")
                 return role_normalized
-            logger.debug(f"Rol office-like mapeado a oficina_coq: {role_raw}")
             return 'oficina_coq'
         
         logger.warning(f"Rol no reconocido: {role_raw}. Usando versión normalizada: {role_normalized}")
@@ -135,7 +126,6 @@ class PermissionManager:
             'office_key': office_key,
             'office_filter': office_filter,
         }
-        logger.debug(f"Permisos obtenidos para usuario: {permissions}")
         return permissions
     @staticmethod
     def has_module_access(module_name: str) -> bool:
@@ -154,7 +144,6 @@ class PermissionManager:
         candidates = {module_norm, module_aliases.get(module_norm, module_norm)}
 
         has_access = any(m in role_modules for m in candidates)
-        logger.debug("Acceso a módulo '%s' (candidatos=%s): %s", module_name, list(candidates), has_access)
         return has_access
 
     @staticmethod
@@ -192,7 +181,6 @@ class PermissionManager:
         else:
             has_permission = action_norm in role_actions
 
-        logger.debug("Permiso para acción '%s' en módulo '%s' (key=%s): %s", action_norm, module_norm, module_key, has_permission)
         return has_permission
 
 
@@ -214,12 +202,10 @@ def can_access(module: str, action: Optional[str] = None) -> bool:
     if action:
         # Verificar permiso para acción específica
         has_permission = PermissionManager.has_action_permission(module, action)
-        logger.debug(f"can_access: {module}.{action} = {has_permission}")
         return has_permission
     else:
         # Verificar acceso al módulo completo
         has_access = PermissionManager.has_module_access(module)
-        logger.debug(f"can_access: módulo {module} = {has_access}")
         return has_access
 
 
@@ -233,14 +219,12 @@ def can_view_actions() -> bool:
 def can_approve_partial_solicitud() -> bool:
     """Verifica permiso para aprobar parcialmente solicitudes"""
     can_partial = PermissionManager.has_action_permission('solicitudes', 'partial_approve')
-    logger.debug(f"Usuario puede aprobar parcialmente solicitudes: {can_partial}")
     return can_partial
 
 
 def can_return_solicitud() -> bool:
     """Verifica permiso para registrar devoluciones"""
     can_return = PermissionManager.has_action_permission('solicitudes', 'return')
-    logger.debug(f"Usuario puede registrar devoluciones: {can_return}")
     return can_return
 
 
@@ -250,7 +234,6 @@ def can_manage_inventario_corporativo() -> bool:
     has_edit = can_access('inventario_corporativo', 'edit')
     has_delete = can_access('inventario_corporativo', 'delete')
     can_manage = has_create or has_edit or has_delete
-    logger.debug(f"Usuario puede gestionar inventario corporativo: {can_manage}")
     return can_manage
 
 
@@ -262,7 +245,6 @@ def can_view_inventario_actions() -> bool:
 def should_show_materiales_menu() -> bool:
     """Determina si debe mostrar el menú de materiales en la interfaz"""
     should_show = can_access('materiales', 'view')
-    logger.debug(f"Mostrar menú de materiales: {should_show}")
     return should_show
 
 
@@ -283,7 +265,6 @@ def get_visible_modules() -> list:
         else:
             visible_modules.append(module)
     
-    logger.debug(f"Módulos visibles para usuario: {visible_modules}")
     return visible_modules
 
 
@@ -291,7 +272,6 @@ def get_accessible_modules() -> list:
     """Obtiene todos los módulos accesibles para el usuario"""
     perms = PermissionManager.get_user_permissions()
     modules = perms.get('role', {}).get('modules', [])
-    logger.debug(f"Módulos accesibles para usuario: {modules}")
     return modules
 
 
@@ -306,10 +286,8 @@ def get_office_filter():
     office_filter = perms.get('office_filter', 'own')
 
     if office_filter == 'all':
-        logger.debug('Filtro de oficina: todas (sin filtro)')
         return None
 
-    logger.debug('Filtro de oficina: own (oficina del usuario)')
     return 'own'
 
 
@@ -317,7 +295,6 @@ def user_can_view_all() -> bool:
     """Verifica si el usuario puede ver registros de todas las oficinas"""
     perms = PermissionManager.get_user_permissions()
     can_view_all = perms.get('office_filter') == 'all'
-    logger.debug(f"Usuario puede ver todas las oficinas: {can_view_all}")
     return can_view_all
 
 
@@ -328,7 +305,6 @@ def user_can_view_all() -> bool:
 def can_create_solicitud() -> bool:
     """Verifica permiso para crear solicitudes"""
     can_create = PermissionManager.has_action_permission('solicitudes', 'create')
-    logger.debug(f"Usuario puede crear solicitudes: {can_create}")
     return can_create
 
 
@@ -342,12 +318,10 @@ def can_create_novedad() -> bool:
     can_create = PermissionManager.has_action_permission('novedades', 'create')
     
     if can_create:
-        logger.debug(f"Rol {role_key} puede crear novedades")
         return True
     
     # También verificar acceso al módulo
     has_module_access = PermissionManager.has_module_access('novedades')
-    logger.debug(f"Rol {role_key} tiene acceso al módulo novedades: {has_module_access}")
     
     return has_module_access
 
@@ -361,7 +335,6 @@ def can_manage_novedad() -> bool:
     roles_gestion_novedad = ['administrador', 'lider_inventario', 'aprobador']
     
     if role_key in roles_gestion_novedad:
-        logger.debug(f"Rol {role_key} puede gestionar novedades")
         return True
     
     # También verificar permisos específicos
@@ -369,14 +342,12 @@ def can_manage_novedad() -> bool:
     can_reject = PermissionManager.has_action_permission('novedades', 'reject')
     can_manage = can_approve or can_reject
     
-    logger.debug(f"Usuario puede gestionar novedades: {can_manage}")
     return can_manage
 
 
 def can_view_novedades() -> bool:
     """Verifica permiso para ver novedades"""
     can_view = PermissionManager.has_action_permission('novedades', 'view')
-    logger.debug(f"Usuario puede ver novedades: {can_view}")
     return can_view
 
 
@@ -386,49 +357,42 @@ def can_export_reports() -> bool:
     Por seguridad, se habilita solo si puede ver el módulo de reportes.
     """
     can_export = PermissionManager.has_module_access('reportes')
-    logger.debug(f"Usuario puede exportar reportes: {can_export}")
     return can_export
 
 
 def can_edit_solicitud() -> bool:
     """Verifica permiso para editar solicitudes"""
     can_edit = PermissionManager.has_action_permission('solicitudes', 'edit')
-    logger.debug(f"Usuario puede editar solicitudes: {can_edit}")
     return can_edit
 
 
 def can_delete_solicitud() -> bool:
     """Verifica permiso para eliminar solicitudes"""
     can_delete = PermissionManager.has_action_permission('solicitudes', 'delete')
-    logger.debug(f"Usuario puede eliminar solicitudes: {can_delete}")
     return can_delete
 
 
 def can_approve_solicitud() -> bool:
     """Verifica permiso para aprobar solicitudes"""
     can_approve = PermissionManager.has_action_permission('solicitudes', 'approve')
-    logger.debug(f"Usuario puede aprobar solicitudes: {can_approve}")
     return can_approve
 
 
 def can_reject_solicitud() -> bool:
     """Verifica permiso para rechazar solicitudes"""
     can_reject = PermissionManager.has_action_permission('solicitudes', 'reject')
-    logger.debug(f"Usuario puede rechazar solicitudes: {can_reject}")
     return can_reject
 
 
 def can_view_reportes() -> bool:
     """Verifica permiso para ver reportes (view_all o view_own)."""
     can_view = can_access('reportes', 'view')
-    logger.debug(f"Usuario puede ver reportes: {can_view}")
     return can_view
 
 
 def can_generate_reportes() -> bool:
     """Verifica permiso para generar reportes"""
     can_generate = PermissionManager.has_action_permission('reportes', 'generate')
-    logger.debug(f"Usuario puede generar reportes: {can_generate}")
     return can_generate
 
 
@@ -437,14 +401,12 @@ def can_manage_usuarios() -> bool:
     can_manage = any(
         can_access('usuarios', a) for a in ('view', 'create', 'edit', 'delete')
     )
-    logger.debug(f"Usuario puede gestionar usuarios: {can_manage}")
     return can_manage
 
 
 def can_view_dashboard() -> bool:
     """Verifica permiso para ver el dashboard."""
     can_view = PermissionManager.has_module_access('dashboard')
-    logger.debug(f"Usuario puede ver dashboard: {can_view}")
     return can_view
 
 
@@ -452,7 +414,6 @@ def get_user_role() -> str:
     """Obtiene el rol del usuario actual"""
     perms = PermissionManager.get_user_permissions()
     role_key = perms.get('role_key', '')
-    logger.debug(f"Rol del usuario: {role_key}")
     return role_key
 
 
@@ -460,7 +421,6 @@ def get_user_modules() -> list:
     """Obtiene los módulos disponibles para el usuario actual"""
     perms = PermissionManager.get_user_permissions()
     role_modules = perms.get('role', {}).get('modules', [])
-    logger.debug(f"Módulos del usuario: {role_modules}")
     return role_modules
 
 
@@ -468,7 +428,6 @@ def has_module_access(module_name: str) -> bool:
     """Verifica si el usuario tiene acceso a un módulo específico"""
     modules = get_user_modules()
     has_access = module_name in modules
-    logger.debug(f"Usuario tiene acceso a {module_name}: {has_access}")
     return has_access
 
 
@@ -476,7 +435,6 @@ def has_module_access(module_name: str) -> bool:
 def check_permission(module: str, action: str) -> bool:
     """Verifica un permiso específico de forma genérica"""
     has_perm = PermissionManager.has_action_permission(module, action)
-    logger.debug(f"Permiso {action} en módulo {module}: {has_perm}")
     return has_perm
 
 
@@ -493,9 +451,7 @@ def check_permissions(permissions_list: list) -> bool:
     """
     for module, action in permissions_list:
         if not PermissionManager.has_action_permission(module, action):
-            logger.debug(f"Falta permiso: {action} en {module}")
             return False
-    logger.debug("Usuario tiene todos los permisos requeridos")
     return True
 
 

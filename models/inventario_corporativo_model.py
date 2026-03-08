@@ -1446,6 +1446,24 @@ class InventarioCorporativoModel:
             ))
 
             # 4) Trazabilidad
+
+            # 3.b) Registrar cantidad asignada en destino (para que los reportes sumen correctamente)
+            # Nota: varias vistas calculan cantidad por oficina usando historial con Accion='ASIGNAR'.
+            cursor.execute("""
+                INSERT INTO AsignacionesCorporativasHistorial
+                    (ProductoId, OficinaId, Accion, Cantidad, UsuarioAccion, Fecha, Observaciones,
+                     UsuarioAsignadoNombre, UsuarioAsignadoEmail)
+                VALUES (?, ?, 'ASIGNAR', ?, ?, GETDATE(), ?, ?, ?)
+            """, (
+                int(producto_id),
+                int(oficina_destino_id),
+                cant,
+                _to_text(usuario_aprueba),
+                f'Traspaso aprobado. TraspasoId={int(traspaso_id)}',
+                usuario_ad_nombre,
+                usuario_ad_email
+            ))
+
             cursor.execute("""
                 INSERT INTO AsignacionesCorporativasHistorial
                     (ProductoId, OficinaId, Accion, Cantidad, UsuarioAccion, Fecha, Observaciones,

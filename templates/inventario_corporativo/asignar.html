@@ -207,33 +207,61 @@
     let activeController = null;
 
     function limpiarResultados() {
+        if (!resultados) return;
         while (resultados.firstChild) resultados.removeChild(resultados.firstChild);
     }
 
-    function setUsuario(u) {
-        usernameEl.value = u.samAccountName || '';
-        nombreEl.value = u.displayName || '';
-        emailEl.value = u.email || '';
-        limpiarResultados();
-        if (input) input.value = u.displayName || u.samAccountName || '';
+    // Normaliza el usuario venga como venga del backend:
+    // - Formato A: {samAccountName, displayName, email, ...}
+    // - Formato B: {usuario, nombre, email, departamento, ...}
+    function norm(u) {
+        const username = u?.samAccountName || u?.usuario || '';
+        const nombre = u?.displayName || u?.nombre || '';
+        const email = u?.email || '';
+        const depto = u?.departamento || u?.department || '';
+        return { username, nombre, email, depto, raw: u };
     }
 
-    function renderResultados(usuarios) {
-        limpiarResultados();
-        if (!usuarios || usuarios.length === 0) return;
+    function setUsuario(u) {
+        const n = norm(u);
+        usernameEl.value = n.username;
+        nombreEl.value = n.nombre;
+        emailEl.value = n.email;
 
-        usuarios.forEach((u) => {
+        limpiarResultados();
+        if (input) input.value = n.nombre || n.username || '';
+    }
+
+    function renderResultados(lista) {
+        limpiarResultados();
+        if (!resultados) return;
+
+        if (!lista || lista.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item text-muted';
+            li.textContent = 'Sin resultados…';
+            resultados.appendChild(li);
+            return;
+        }
+
+        lista.forEach((u) => {
+            const n = norm(u);
             const li = document.createElement('li');
             li.className = 'list-group-item list-group-item-action';
 
             const primary = document.createElement('div');
-            primary.textContent = u.displayName || u.samAccountName || '(sin nombre)';
+            primary.textContent = n.nombre || n.username || '(sin nombre)';
             li.appendChild(primary);
 
-            if (u.email) {
+            const meta = [];
+            if (n.username) meta.push(n.username);
+            if (n.email) meta.push(n.email);
+            if (n.depto) meta.push(n.depto);
+
+            if (meta.length) {
                 const secondary = document.createElement('small');
                 secondary.className = 'text-muted';
-                secondary.textContent = u.email;
+                secondary.textContent = meta.join(' • ');
                 li.appendChild(secondary);
             }
 
@@ -243,7 +271,8 @@
     }
 
     async function buscar(q) {
-        if (!q || q.trim().length < 2) {
+        const term = (q || '').trim();
+        if (!term || term.length < 2) {
             limpiarResultados();
             return;
         }
@@ -252,16 +281,28 @@
         activeController = new AbortController();
 
         const url = new URL("{{ url_for('inventario_corporativo.api_buscar_usuarios_ad') }}", window.location.origin);
-        url.searchParams.set('q', q);
+        // compatibilidad: algunos endpoints esperan q, otros term
+        url.searchParams.set('q', term);
+        url.searchParams.set('term', term);
 
         try {
-            const res = await fetch(url.toString(), { signal: activeController.signal, headers: { 'Accept': 'application/json' } });
+            const res = await fetch(url.toString(), {
+                signal: activeController.signal,
+                headers: { 'Accept': 'application/json' }
+            });
             if (!res.ok) return;
 
-            const data = await res.json();
-            renderResultados(data.usuarios || []);
+            const data = await res.json().catch(() => ({}));
+
+            // compatibilidad de payload:
+            // - {users: [...]}
+            // - {usuarios: [...]}
+            // - {success: true, users: [...]}
+            const lista = data.users || data.usuarios || [];
+            renderResultados(lista);
+
         } catch (e) {
-            // si se aborta, no hacemos nada
+            // AbortController: ignorar
         }
     }
 

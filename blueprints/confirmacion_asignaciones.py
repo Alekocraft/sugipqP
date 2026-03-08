@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import os
-import hashlib
-import uuid
 import logging
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
@@ -262,7 +260,6 @@ def verificar_credencial(token):
                     )
                 }
 
-                logger.info("%s", sanitizar_log_text(f"DATOS PARA PLANTILLA: {datos_confirmacion}"))
 
                 return safe_render_template(
                     'confirmacion/confirmado_exitoso.html',
@@ -286,7 +283,6 @@ def verificar_credencial(token):
     except Exception as e:
         error_msg = 'Error inesperado: Error interno'
         logger.error("%s", sanitizar_log_text(f"❌ Error en verificar_credencial: {error_msg}"))
-        logger.debug("Traceback omitido por seguridad")
         return safe_render_template(
             'confirmacion/error.html',
             error="Ocurrió un error inesperado. Por favor, contacte al administrador del sistema."

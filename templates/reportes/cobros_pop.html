@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Cobros POP{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1 text-primary"><i class="fas fa-cash-register me-2"></i>Reporte de Cobros - Material POP</h1>
+      <p class="text-muted small mb-0">Control por periodo, oficina y detalle por solicitud con diferido.</p>
+    </div>
+    <a href="/reportes" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Volver a Reportes</a>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-primary text-white py-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0 fw-semibold"><i class="fas fa-filter me-1"></i>Periodo y acciones</h6>
+        <div class="d-flex gap-2 flex-wrap">
+          {% if can_export %}
+          <a class="btn btn-success btn-sm shadow-sm px-3" href="/reportes/cobros-pop/export/excel?periodo={{ periodo }}"><i class="fas fa-file-excel me-2"></i>Exportar Excel</a>
+          <a class="btn btn-danger btn-sm shadow-sm px-3" href="/reportes/cobros-pop/export/pdf?periodo={{ periodo }}" target="_blank"><i class="fas fa-file-pdf me-2"></i>Exportar PDF</a>
+          {% endif %}
+          {% if can_cancel %}
+          <button class="btn btn-warning btn-sm" onclick="marcarTodas('CANCELADO')"><i class="fas fa-check-circle me-1"></i>Marcar todas cancelado</button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <form class="row g-3 align-items-end" method="GET" action="/reportes/cobros-pop">
+        <div class="col-sm-4 col-md-3">
+          <label class="form-label">Mes del reporte</label>
+          <input type="month" name="periodo" class="form-control" value="{{ periodo }}">
+        </div>
+        <div class="col-sm-4 col-md-3">
+          <button class="btn btn-primary w-100" type="submit"><i class="fas fa-sync-alt me-1"></i>Cargar</button>
+        </div>
+        <div class="col-12">
+          <div class="alert alert-info mb-0">
+            <i class="fas fa-info-circle me-1"></i>
+            El cobro se calcula por <strong>FechaAprobacion</strong>. El diferido se crea <strong>por solicitud</strong>. Desde el detalle puedes indicar si inicia en <strong>este mes</strong> o en <strong>el próximo</strong>, y también marcar como pagadas las cuotas del <strong>mes que selecciones</strong>.
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3"><div class="card border-0 shadow-sm h-100"><div class="card-body text-center"><h4 class="fw-bold mb-0 text-primary">{{ total_general.total_oficinas|default(0) }}</h4><small class="text-muted">Oficinas</small></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card border-0 shadow-sm h-100"><div class="card-body text-center"><h4 class="fw-bold mb-0 text-warning">{{ total_general.total_solicitudes|default(0) }}</h4><small class="text-muted">Solicitudes del periodo</small></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card border-0 shadow-sm h-100"><div class="card-body text-center"><h4 class="fw-bold mb-0 text-info">${{ "{:,.2f}".format(total_general.total_valor_cuotas|default(0)|float) }}</h4><small class="text-muted">Cuotas del mes</small></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card border-0 shadow-sm h-100"><div class="card-body text-center"><h4 class="fw-bold mb-0 text-success">${{ "{:,.2f}".format(total_general.total_a_pagar|default(0)|float) }}</h4><small class="text-muted">Total a pagar</small></div></div></div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-success text-white py-3">
+      <h6 class="mb-0 fw-semibold"><i class="fas fa-building me-1"></i>Cobro por oficina <span class="badge bg-light text-dark ms-2">{{ oficinas|length }}</span></h6>
+    </div>
+    <div class="card-body">
+      {% if oficinas|length == 0 %}
+      <div class="alert alert-warning mb-0"><i class="fas fa-exclamation-triangle me-1"></i>No hay cobros ni cuotas para el periodo <strong>{{ periodo }}</strong>.</div>
+      {% else %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Oficina</th>
+              <th class="text-center">Solicitudes</th>
+              <th class="text-end">Cobro periodo</th>
+              <th class="text-end">Cuotas mes</th>
+              <th class="text-end">Total a pagar</th>
+              <th class="text-center">Estado</th>
+              <th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for of in oficinas %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ of.oficina_nombre }}</div>
+                <div class="text-muted small">Productos: {{ of.total_productos }} · Cantidad: {{ of.total_cantidad }}</div>
+              </td>
+              <td class="text-center">{{ of.solicitudes|length }}</td>
+              <td class="text-end">${{ "{:,.2f}".format(of.total_valor_cobro|float) }}</td>
+              <td class="text-end">${{ "{:,.2f}".format(of.total_cuota_mes|default(0)|float) }}</td>
+              <td class="text-end fw-semibold">${{ "{:,.2f}".format(of.total_a_pagar|default(0)|float) }}</td>
+              <td class="text-center">
+                {% if (of.estado_cobro or 'PENDIENTE')|upper == 'CANCELADO' %}
+                  <span class="badge bg-success">Cobro cancelado</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Cobro pendiente</span>
+                {% endif %}
+                {% if of.total_cuota_mes|default(0)|float > 0 %}
+                  <span class="badge ms-1 {% if (of.estado_cuota_mes or '') == 'PAGADO' %}bg-success{% else %}bg-info text-dark{% endif %}">Cuotas {{ 'pagadas' if (of.estado_cuota_mes or '') == 'PAGADO' else 'pendientes' }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#detalleOficina{{ of.oficina_id }}"><i class="fas fa-eye me-1"></i>Detalle</button>
+                {% if can_cancel %}
+                  {% if (of.estado_cobro or 'PENDIENTE')|upper == 'CANCELADO' %}
+                  <button class="btn btn-outline-secondary btn-sm" onclick="cambiarEstado({{ of.oficina_id }}, 'PENDIENTE')"><i class="fas fa-undo me-1"></i>Volver cobro</button>
+                  {% else %}
+                  <button class="btn btn-success btn-sm" onclick="cambiarEstado({{ of.oficina_id }}, 'CANCELADO')"><i class="fas fa-check me-1"></i>Cobro cancelado</button>
+                  {% endif %}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% for of in oficinas %}
+  <div class="modal fade" id="detalleOficina{{ of.oficina_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-1"><i class="fas fa-building me-2"></i>{{ of.oficina_nombre }} — {{ periodo }}</h5>
+            <div class="small text-muted">Desde aquí puedes descargar el PDF o Excel solo de esta oficina, incluyendo cobro, diferidos y estado de cuotas del periodo.</div>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap ms-3">
+            {% if can_export %}
+            <a class="btn btn-success btn-sm shadow-sm px-3" href="/reportes/cobros-pop/export/excel?periodo={{ periodo }}&oficina_id={{ of.oficina_id }}"><i class="fas fa-file-excel me-2"></i>Excel detalle</a>
+            <a class="btn btn-danger btn-sm shadow-sm px-3" href="/reportes/cobros-pop/export/pdf?periodo={{ periodo }}&oficina_id={{ of.oficina_id }}" target="_blank"><i class="fas fa-file-pdf me-2"></i>PDF detalle</a>
+            {% endif %}
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="border rounded p-3 h-100"><div class="small text-muted">Cobro del periodo</div><div class="fw-bold fs-5">${{ "{:,.2f}".format(of.total_valor_cobro|float) }}</div></div></div>
+            <div class="col-md-4"><div class="border rounded p-3 h-100"><div class="small text-muted">Cuotas del mes del reporte</div><div class="fw-bold fs-5">${{ "{:,.2f}".format(of.total_cuota_mes|default(0)|float) }}</div></div></div>
+            <div class="col-md-4"><div class="border rounded p-3 h-100"><div class="small text-muted">Total a pagar</div><div class="fw-bold fs-5 text-success">${{ "{:,.2f}".format(of.total_a_pagar|default(0)|float) }}</div></div></div>
+          </div>
+
+          {% if can_cancel %}
+          <div class="card border-0 bg-light mb-3">
+            <div class="card-body">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label form-label-sm mb-1">Mes a marcar como pagado</label>
+                  <input type="month" class="form-control form-control-sm" id="periodoPago{{ of.oficina_id }}" value="{{ periodo }}">
+                </div>
+                <div class="col-md-5">
+                  <div class="small text-muted">
+                    Selecciona el mes que quieres afectar para esta oficina. Esto marca o revierte todas las cuotas diferidas de ese mes.
+                  </div>
+                </div>
+                <div class="col-md-3 d-grid gap-2">
+                  <button class="btn btn-info btn-sm" onclick="pagarCuotasMesSeleccionado({{ of.oficina_id }}, true)"><i class="fas fa-money-bill-wave me-1"></i>Marcar pagado</button>
+                  <button class="btn btn-outline-secondary btn-sm" onclick="pagarCuotasMesSeleccionado({{ of.oficina_id }}, false)"><i class="fas fa-undo me-1"></i>Revertir pago</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <h6 class="fw-semibold mb-2"><i class="fas fa-file-invoice-dollar me-1"></i>Solicitudes del periodo</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Solicitud</th>
+                  <th>Fecha aprobación</th>
+                  <th class="text-center">Ítems</th>
+                  <th class="text-center">Cantidad</th>
+                  <th class="text-end">% Oficina</th>
+                  <th class="text-end">Valor total</th>
+                  <th class="text-end">Valor cobro</th>
+                  <th>Diferido</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in of.solicitudes %}
+                <tr>
+                  <td class="fw-semibold">#{{ s.solicitud_id }}</td>
+                  <td>{{ s.fecha_aprobacion.strftime('%Y-%m-%d') if s.fecha_aprobacion else '' }}</td>
+                  <td class="text-center">{{ s.numero_registros }}</td>
+                  <td class="text-center">{{ s.cantidad_total }}</td>
+                  <td class="text-end">{{ "{:.2f}".format(s.porcentaje_oficina|float) }}%</td>
+                  <td class="text-end">${{ "{:,.2f}".format(s.valor_total|float) }}</td>
+                  <td class="text-end fw-semibold">${{ "{:,.2f}".format(s.valor_cobro_oficina|float) }}</td>
+                  <td style="min-width: 420px;">
+                    {% if s.tiene_diferido_activo %}
+                      {% for plan in s.planes %}
+                      <div class="border rounded p-2 mb-2 bg-light">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                          <div>
+                            <div class="fw-semibold text-primary">Diferido activo</div>
+                            <div class="small text-muted">Origen: {{ plan.periodo_origen }} · Inicio: {{ plan.periodo_inicio }} · Fin: {{ plan.periodo_fin }}</div>
+                          </div>
+                          <span class="badge bg-primary">{{ plan.numero_cuotas }} cuotas</span>
+                        </div>
+                        <div class="row mt-2 g-2 small">
+                          <div class="col-md-4"><strong>Total diferido</strong><br>${{ "{:,.2f}".format(plan.total_diferido|float) }}</div>
+                          <div class="col-md-4"><strong>Valor cuota</strong><br>${{ "{:,.2f}".format(plan.valor_cuota|float) }}</div>
+                          <div class="col-md-4"><strong>Mes inicial</strong><br>{{ plan.periodo_inicio }}</div>
+                        </div>
+                        {% if plan.cuotas %}
+                        <div class="table-responsive mt-2">
+                          <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th class="text-center">#</th>
+                                <th class="text-center">Mes</th>
+                                <th class="text-end">Valor</th>
+                                <th class="text-center">Estado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for cuota in plan.cuotas %}
+                              <tr>
+                                <td class="text-center">{{ cuota.numero_cuota }}/{{ plan.numero_cuotas }}</td>
+                                <td class="text-center">{{ cuota.periodo }}</td>
+                                <td class="text-end fw-semibold">${{ "{:,.2f}".format(cuota.valor_cuota|float) }}</td>
+                                <td class="text-center">{% if cuota.pagado %}<span class="badge bg-success">Pagada</span>{% else %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}</td>
+                              </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                        {% endif %}
+                      </div>
+                      {% endfor %}
+                    {% elif s.puede_diferir and can_cancel %}
+                    <div class="border rounded p-2">
+                      <div class="fw-semibold mb-2">Crear diferido</div>
+                      <div class="small text-muted mb-2">
+                        Valor a diferir: <strong>${{ "{:,.2f}".format(s.valor_cobro_oficina|float) }}</strong>
+                      </div>
+                      <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                          <label class="form-label form-label-sm mb-1">Cuotas</label>
+                          <input type="number" min="2" max="120" value="24" class="form-control form-control-sm" id="cuotasSolicitud{{ s.solicitud_id }}" oninput="actualizarVistaPrevia({{ s.solicitud_id }}, {{ s.valor_cobro_oficina|float }})">
+                        </div>
+                        <div class="col-md-5">
+                          <label class="form-label form-label-sm mb-1">Iniciar cobro</label>
+                          <select class="form-select form-select-sm" id="inicioSolicitud{{ s.solicitud_id }}">
+                            <option value="actual">Desde este mes ({{ s.inicio_actual }})</option>
+                            <option value="proximo">Desde el próximo mes ({{ s.inicio_proximo }})</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4 d-grid">
+                          <button class="btn btn-primary btn-sm" onclick="crearDiferidoSolicitud({{ of.oficina_id }}, {{ s.solicitud_id }})"><i class="fas fa-calendar-alt me-1"></i>Guardar diferido</button>
+                        </div>
+                      </div>
+                      <div class="alert alert-secondary mt-2 mb-0 py-2 px-3 small" id="previewSolicitud{{ s.solicitud_id }}">
+                        Cuota estimada: <strong>${{ "{:,.2f}".format((s.valor_cobro_oficina|float / 24) if (s.valor_cobro_oficina|float > 0) else 0) }}</strong>
+                      </div>
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">Sin valor a diferir.</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% if of.cuotas_mes %}
+          <h6 class="fw-semibold mt-4 mb-2"><i class="fas fa-receipt me-1"></i>Cuotas del mes del reporte</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Solicitud</th>
+                  <th>Periodo origen</th>
+                  <th class="text-center">Cuota</th>
+                  <th class="text-center">Mes</th>
+                  <th class="text-end">Valor</th>
+                  <th class="text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for q in of.cuotas_mes %}
+                <tr>
+                  <td>#{{ q.solicitud_id }}</td>
+                  <td>{{ q.periodo_origen }}</td>
+                  <td class="text-center">{{ q.numero_cuota }}/{{ q.numero_cuotas }}</td>
+                  <td class="text-center">{{ q.periodo }}</td>
+                  <td class="text-end fw-semibold">${{ "{:,.2f}".format(q.valor_cuota|float) }}</td>
+                  <td class="text-center">{% if q.pagado %}<span class="badge bg-success">Pagada</span>{% else %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function formatoMoneda(valor) {
+  return Number(valor || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function actualizarVistaPrevia(solicitudId, totalDiferido) {
+  const cuotasInput = document.getElementById(`cuotasSolicitud${solicitudId}`);
+  const preview = document.getElementById(`previewSolicitud${solicitudId}`);
+  if (!cuotasInput || !preview) return;
+  const cuotas = parseInt(cuotasInput.value || '0', 10);
+  if (!cuotas || cuotas < 2) {
+    preview.innerHTML = 'Ingresa un número de cuotas válido (mínimo 2).';
+    return;
+  }
+  const valorCuota = Number(totalDiferido || 0) / cuotas;
+  preview.innerHTML = `Cuota estimada: <strong>$${formatoMoneda(valorCuota)}</strong> · Total diferido: <strong>$${formatoMoneda(totalDiferido)}</strong> · Número de cuotas: <strong>${cuotas}</strong>`;
+}
+
+async function cambiarEstado(oficinaId, estado) {
+  try {
+    const resp = await fetch('/reportes/cobros-pop/estado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodo: '{{ periodo }}', oficina_id: oficinaId, estado: estado })
+    });
+    const data = await resp.json();
+    if (!data.success) return alert(data.message || 'No se pudo actualizar el estado');
+    window.location.href = `/reportes/cobros-pop?periodo={{ periodo }}`;
+  } catch (e) { alert('Error de red al actualizar el estado'); }
+}
+
+async function marcarTodas(estado) {
+  if (!confirm('¿Seguro que desea actualizar el estado de todas las oficinas con cobro para este mes?')) return;
+  try {
+    const resp = await fetch('/reportes/cobros-pop/estado-todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodo: '{{ periodo }}', estado })
+    });
+    const data = await resp.json();
+    if (!data.success) return alert(data.message || 'No se pudo actualizar el estado');
+    window.location.href = `/reportes/cobros-pop?periodo={{ periodo }}`;
+  } catch (e) { alert('Error de red al actualizar estados'); }
+}
+
+async function crearDiferidoSolicitud(oficinaId, solicitudId) {
+  const cuotas = document.getElementById(`cuotasSolicitud${solicitudId}`).value;
+  const inicioTipo = document.getElementById(`inicioSolicitud${solicitudId}`).value;
+  try {
+    const resp = await fetch('/reportes/cobros-pop/diferir-solicitud', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodo: '{{ periodo }}', oficina_id: oficinaId, solicitud_id: solicitudId, cuotas, inicio_tipo: inicioTipo })
+    });
+    const data = await resp.json();
+    if (!data.success) return alert(data.message || 'No se pudo crear el diferido');
+    alert(`Diferido creado. Inicio: ${data.periodo_inicio} | Cuotas: ${data.numero_cuotas} | Valor cuota: $${formatoMoneda(data.valor_cuota || 0)}`);
+    window.location.href = `/reportes/cobros-pop?periodo={{ periodo }}`;
+  } catch (e) { alert('Error de red al crear el diferido'); }
+}
+
+async function pagarCuotasMesSeleccionado(oficinaId, pagado) {
+  const periodoPagoInput = document.getElementById(`periodoPago${oficinaId}`);
+  const periodoPago = periodoPagoInput ? periodoPagoInput.value : '{{ periodo }}';
+  if (!periodoPago) {
+    alert('Selecciona el mes a afectar.');
+    return;
+  }
+  const texto = pagado ? `marcar como pagadas las cuotas del mes ${periodoPago}` : `revertir el pago de las cuotas del mes ${periodoPago}`;
+  if (!confirm(`¿Seguro que desea ${texto} para esta oficina?`)) return;
+  try {
+    const resp = await fetch('/reportes/cobros-pop/cuota/pagar-mes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodo: periodoPago, oficina_id: oficinaId, pagado })
+    });
+    const data = await resp.json();
+    if (!data.success) return alert(data.message || 'No se pudo actualizar el pago de cuotas');
+    alert((data.message || 'Proceso realizado') + `\nMes afectado: ${data.periodo || periodoPago}`);
+    window.location.href = `/reportes/cobros-pop?periodo=${periodoPago}`;
+  } catch (e) { alert('Error de red al actualizar cuotas'); }
+}
+
+window.addEventListener('load', function() {
+  {% for of in oficinas %}
+    {% for s in of.solicitudes %}
+      actualizarVistaPrevia({{ s.solicitud_id }}, {{ s.valor_cobro_oficina|float }});
+    {% endfor %}
+  {% endfor %}
+});
+</script>
+{% endblock %}

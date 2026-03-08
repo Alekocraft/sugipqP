@@ -26,7 +26,6 @@ OFFICE_LIKE_ROLES = ['gerencia_talento_humano', 'gerencia_comercial', 'comunicac
 def get_user_role() -> str:
     """Obtiene el rol del usuario actual en minúsculas."""
     rol = (session.get('rol') or '').lower()
-    logger.debug("get_user_role: %s", rol)
     return rol
 
 
@@ -34,7 +33,6 @@ def has_gestion_completa() -> bool:
     """Verifica si el usuario tiene permisos de gestión completa."""
     rol = get_user_role()
     result = rol in ROLES_GESTION_COMPLETA
-    logger.debug("has_gestion_completa: rol=%s result=%s", rol, result)
     return result
 
 
@@ -42,7 +40,6 @@ def is_oficina_role() -> bool:
     """Verifica si el usuario tiene rol de oficina (incluye office-like)."""
     rol = get_user_role()
     result = rol.startswith('oficina_') or rol in ROLES_OFICINA or rol in OFFICE_LIKE_ROLES
-    logger.debug("is_oficina_role: rol=%s result=%s", rol, result)
     return result
 
 
@@ -50,7 +47,6 @@ def can_create_or_view() -> bool:
     """Puede crear novedades o ver detalles (gestión completa u oficina/office-like)."""
     rol = get_user_role()
     result = rol in ROLES_GESTION_COMPLETA or rol.startswith('oficina_') or rol in ROLES_OFICINA or rol in OFFICE_LIKE_ROLES
-    logger.debug("can_create_or_view: rol=%s result=%s", rol, result)
     return result
 
 
@@ -78,10 +74,6 @@ def should_show_devolucion_button(solicitud: dict) -> bool:
     cantidad_devuelta = solicitud.get('cantidad_devuelta', 0) or 0
 
     result = cantidad_entregada > cantidad_devuelta
-    logger.debug(
-        "should_show_devolucion_button: estado_id=%s entregada=%s devuelta=%s result=%s",
-        estado_id, cantidad_entregada, cantidad_devuelta, result
-    )
     return result
 
 
@@ -104,15 +96,10 @@ def should_show_gestion_devolucion_button(solicitud: dict) -> bool:
     try:
         from models.solicitudes_model import SolicitudModel
         result = bool(SolicitudModel.tiene_devolucion_pendiente(int(solicitud_id)))
-        logger.debug("should_show_gestion_devolucion_button: solicitud_id=%s result=%s", solicitud_id, result)
         return result
     except Exception as e:
         # Fallback: si viene marcado desde el backend, úsalo.
         fallback = bool(solicitud.get('devolucion_pendiente'))
-        logger.debug(
-            "should_show_gestion_devolucion_button fallback: solicitud_id=%s devolucion_pendiente=%s err=%s",
-            solicitud_id, fallback, e
-        )
         return fallback
 
 
@@ -133,7 +120,6 @@ def should_show_novedad_button(solicitud: dict) -> bool:
         return False
 
     result = estado_id in (2, 4, 5)
-    logger.debug("should_show_novedad_button: estado_id=%s result=%s", estado_id, result)
     return result
 
 
@@ -147,7 +133,6 @@ def should_show_gestion_novedad_button(solicitud: dict) -> bool:
 
     estado_id = solicitud.get('estado_id') or 1
     result = estado_id == 7
-    logger.debug("should_show_gestion_novedad_button: estado_id=%s result=%s", estado_id, result)
     return result
 
 
@@ -161,7 +146,6 @@ def should_show_aprobacion_buttons(solicitud: dict) -> bool:
 
     estado_id = solicitud.get('estado_id') or 1
     result = estado_id == 1
-    logger.debug("should_show_aprobacion_buttons: estado_id=%s result=%s", estado_id, result)
     return result
 
 

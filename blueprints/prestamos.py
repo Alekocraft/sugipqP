@@ -84,8 +84,6 @@ try:
 except ImportError:
     NOTIFICACIONES_ACTIVAS = False
     logger.info("⚠️ Servicio de notificaciones no disponible para préstamos")
-import logging
-logger = logging.getLogger(__name__)
 
 prestamos_bp = Blueprint('prestamos', __name__)
 
@@ -1466,8 +1464,6 @@ def crear_material_prestamo():
             VALUES ({", ".join(["?"] * len(columnas))})
         """
 
-        logger.debug("Ejecutando SQL inserción ElementosPublicitarios (cols=%s)", sanitizar_log_text(columnas))
-        logger.debug("Valores de inserción ElementosPublicitarios preparados (len=%s)", sanitizar_log_text(len(valores)))
         cur.execute(sql, tuple(valores))
         conn.commit()
 

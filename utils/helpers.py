@@ -35,20 +35,17 @@ def save_uploaded_file(file, subfolder=''):
     filepath = os.path.join(upload_dir, filename)
     file.save(filepath)
     
-    logger.debug("Archivo guardado exitosamente: %s", sanitizar_log_text(os.path.basename(filepath)))
     return f'/{filepath.replace(os.sep, "/")}'
 
 def get_user_permissions():
     """Obtiene los permisos del usuario actual basados en su rol de sesión"""
     role = session.get('rol')
     permissions = Config.ROLES.get(role, [])
-    logger.debug("Permisos obtenidos para rol %s: %s permisos", sanitizar_log_text(role), len(permissions))
     return permissions
 
 def can_access(section):
     """Verifica si el usuario actual tiene acceso a la sección especificada"""
     has_access = section in get_user_permissions()
-    logger.debug("Acceso a sección %s: %s", sanitizar_log_text(section), has_access)
     return has_access
 
 def format_currency(value):
@@ -86,7 +83,6 @@ def get_pagination_params(default_per_page=20):
     if per_page < 1 or per_page > 100:
         per_page = default_per_page
     
-    logger.debug("Parámetros de paginación: página=%s, por_página=%s", page, per_page)
     return page, per_page
 
 def flash_errors(form):
@@ -109,7 +105,6 @@ def generate_codigo_unico(prefix, existing_codes):
         codigo = f"{prefix}-{random_part}"
         
         if codigo not in existing_codes:
-            logger.debug("Código único generado: %s (intento %s)", codigo, attempt + 1)
             return codigo
     
     logger.error("No se pudo generar código único después de %s intentos", max_attempts)
@@ -145,7 +140,6 @@ def obtener_mes_actual():
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
     mes_actual = meses[datetime.now().month - 1]
-    logger.debug("Mes actual obtenido: %s", mes_actual)
     return mes_actual
 
 # ==================== FUNCIONES DE SANITIZACIÓN PARA LOGS ====================
@@ -254,7 +248,6 @@ def sanitizar_log_text(value, max_len=500):
     if max_len and len(s) > max_len:
         s = s[:max_len] + '...'
     return s
-
 
 
 # Exportar las funciones de sanitización para que estén disponibles

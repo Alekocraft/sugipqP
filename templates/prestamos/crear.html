@@ -38,7 +38,7 @@
                   data-valor="{{ e.valor }}"
                   data-disponible="{{ e.disponible }}"
                   data-imagen="{{ e.imagen|default('')|e }}"
-              >
+                >
                   {{ e.nombre }} (Disp: {{ e.disponible }})
                 </option>
                 {% endfor %}
@@ -86,7 +86,8 @@
           <h2 class="h6">Resumen</h2>
           <div class="d-flex gap-3">
             <div style="width: 96px; height: 96px; flex: 0 0 auto;">
-              <img id="resumenImagen" src="" alt="Imagen del material" class="img-fluid rounded border" style="object-fit: cover; width: 96px; height: 96px; display:none;">
+              <!-- d-none evita que se muestre a la vez que "Sin imagen" (bootstrap usa !important) -->
+              <img id="resumenImagen" src="" alt="Imagen del material" class="img-fluid rounded border d-none" style="object-fit: cover; width: 96px; height: 96px;">
               <div id="resumenSinImagen" class="border rounded d-flex align-items-center justify-content-center text-muted" style="width: 96px; height: 96px;">
                 <span style="font-size: 12px;">Sin imagen</span>
               </div>
@@ -112,7 +113,7 @@
 
 {% block scripts %}
 <script>
-  
+
 function getCsrfToken() {
   const meta = document.querySelector('meta[name="csrf-token"]');
   if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
@@ -125,132 +126,176 @@ function isSafeImageUrl(url) {
   if (!url) return false;
   const s = String(url).trim();
   if (!s) return false;
-  if (/[
-	]/.test(s)) return false;
+  if (/[\r\n\t]/.test(s)) return false;
   if (s.startsWith('javascript:') || s.startsWith('data:')) return false;
   return s.startsWith('/') || s.startsWith('http://') || s.startsWith('https://');
 }
 
 // Navegación segura (misma-origen)
-  function safeNavigate(path) {
-    try {
-      if (typeof path !== 'string') return;
-      const dest = path.trim();
-      if (!dest.startsWith('/') || dest.startsWith('//')) return;
-      if (dest.includes('\\') || /[\r\n\t]/.test(dest)) return;
-      window.location.assign(dest);
-    } catch (e) { /* no-op */ }
+function safeNavigate(path) {
+  try {
+    if (typeof path !== 'string') return;
+    const dest = path.trim();
+    if (!dest.startsWith('/') || dest.startsWith('//')) return;
+    if (dest.includes('\\') || /[\r\n\t]/.test(dest)) return;
+    window.location.assign(dest);
+  } catch (e) { /* no-op */ }
+}
+
+function showAlert(message, type) {
+  const container = document.getElementById('alertContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'alert alert-' + (type || 'info') + ' alert-dismissible fade show';
+  div.role = 'alert';
+  const span = document.createElement('span');
+  span.textContent = message || '';
+  div.appendChild(span);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-close';
+  btn.setAttribute('data-bs-dismiss', 'alert');
+  btn.setAttribute('aria-label', 'Close');
+  div.appendChild(btn);
+
+  container.appendChild(div);
+}
+
+function formatCOP(value) {
+  const n = Number(value || 0);
+  try {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+  } catch (e) {
+    return '$ ' + Math.round(n).toString();
+  }
+}
+
+function updateResumen() {
+  const sel = document.getElementById('elemento_id');
+  const qtyInput = document.getElementById('cantidad');
+  const opt = sel && sel.selectedOptions ? sel.selectedOptions[0] : null;
+
+  const material = opt ? (opt.dataset.nombre || '—') : '—';
+  const disponible = opt ? (opt.dataset.disponible || '—') : '—';
+  const valor = opt ? Number(opt.dataset.valor || 0) : 0;
+  const imagen = opt ? (opt.dataset.imagen || '') : '';
+  const qty = Number(qtyInput && qtyInput.value ? qtyInput.value : 0);
+
+  document.getElementById('resumenMaterial').textContent = material;
+  document.getElementById('resumenDisponible').textContent = disponible;
+  document.getElementById('resumenValorUnitario').textContent = formatCOP(valor);
+  document.getElementById('resumenCantidad').textContent = qty > 0 ? String(qty) : '—';
+  document.getElementById('resumenSubtotal').textContent = qty > 0 ? formatCOP(valor * qty) : '—';
+
+  const imgEl = document.getElementById('resumenImagen');
+  const noImgEl = document.getElementById('resumenSinImagen');
+
+  function showNoImage() {
+    if (!imgEl || !noImgEl) return;
+    imgEl.classList.add('d-none');
+    noImgEl.classList.remove('d-none');
+    imgEl.removeAttribute('src');
+    imgEl.removeAttribute('data-src');
   }
 
-  function showAlert(message, type) {
-    const container = document.getElementById('alertContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    const div = document.createElement('div');
-    div.className = 'alert alert-' + (type || 'info') + ' alert-dismissible fade show';
-    div.role = 'alert';
-    const span = document.createElement('span');
-    span.textContent = message || '';
-    div.appendChild(span);
+  function startLoading(src) {
+    if (!imgEl || !noImgEl) return;
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn-close';
-    btn.setAttribute('data-bs-dismiss', 'alert');
-    btn.setAttribute('aria-label', 'Close');
-    div.appendChild(btn);
+    // placeholder visible mientras carga
+    imgEl.classList.add('d-none');
+    noImgEl.classList.remove('d-none');
 
-    container.appendChild(div);
-  }
+    // handlers ANTES de asignar src (evita perder el load por caché)
+    imgEl.onload = function () {
+      imgEl.classList.remove('d-none');
+      noImgEl.classList.add('d-none');
+    };
 
-  function formatCOP(value) {
-    const n = Number(value || 0);
-    try {
-      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-    } catch (e) {
-      return '$ ' + Math.round(n).toString();
+    imgEl.onerror = function () {
+      showNoImage();
+    };
+
+    // si ya es la misma imagen y está cargada (caché), mostrar sin esperar load
+    if (imgEl.getAttribute('data-src') === src && imgEl.complete && imgEl.naturalWidth > 0) {
+      imgEl.classList.remove('d-none');
+      noImgEl.classList.add('d-none');
+      return;
+    }
+
+    imgEl.setAttribute('data-src', src);
+    imgEl.src = src;
+
+    // si cargó instantáneo por caché, resolver también aquí
+    if (imgEl.complete && imgEl.naturalWidth > 0) {
+      imgEl.classList.remove('d-none');
+      noImgEl.classList.add('d-none');
     }
   }
 
-  function updateResumen() {
-    const sel = document.getElementById('elemento_id');
-    const qtyInput = document.getElementById('cantidad');
-    const opt = sel && sel.selectedOptions ? sel.selectedOptions[0] : null;
-
-    const material = opt ? (opt.dataset.nombre || '—') : '—';
-    const disponible = opt ? (opt.dataset.disponible || '—') : '—';
-    const valor = opt ? Number(opt.dataset.valor || 0) : 0;
-    const imagen = opt ? (opt.dataset.imagen || '') : '';
-    const qty = Number(qtyInput && qtyInput.value ? qtyInput.value : 0);
-
-    document.getElementById('resumenMaterial').textContent = material;
-    document.getElementById('resumenDisponible').textContent = disponible;
-    document.getElementById('resumenValorUnitario').textContent = formatCOP(valor);
-    document.getElementById('resumenCantidad').textContent = qty > 0 ? String(qty) : '—';
-    document.getElementById('resumenSubtotal').textContent = qty > 0 ? formatCOP(valor * qty) : '—';
-
-    const imgEl = document.getElementById('resumenImagen');
-    const noImgEl = document.getElementById('resumenSinImagen');
-    if (imagen && isSafeImageUrl(imagen)) {
-      imgEl.src = imagen;
-      imgEl.style.display = '';
-      noImgEl.style.display = 'none';
-    } else {
-      imgEl.removeAttribute('src');
-      imgEl.style.display = 'none';
-      noImgEl.style.display = '';
-    }
+  if (imagen && isSafeImageUrl(imagen)) {
+    startLoading(imagen);
+  } else {
+    showNoImage();
   }
+}
 
-  (function init() {
-    const sel = document.getElementById('elemento_id');
-    const qty = document.getElementById('cantidad');
-    if (sel) sel.addEventListener('change', updateResumen);
-    if (qty) qty.addEventListener('input', updateResumen);
+(function init() {
+  const sel = document.getElementById('elemento_id');
+  const qty = document.getElementById('cantidad');
 
-    updateResumen();
+  if (sel) sel.addEventListener('change', updateResumen);
+  if (qty) qty.addEventListener('input', updateResumen);
 
-    const form = document.getElementById('prestamoForm');
-    if (!form) return;
+  updateResumen();
 
-    form.addEventListener('submit', async function (ev) {
-      ev.preventDefault();
+  const form = document.getElementById('prestamoForm');
+  if (!form) return;
 
-      const formData = new FormData(form);
+  form.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
 
-      try {
-        const resp = await fetch('/prestamos/crear', {
-          method: 'POST',
-          body: formData,
-          credentials: 'same-origin',
-          headers: (function(){ const h = { 'X-Requested-With': 'XMLHttpRequest' }; const tkn = getCsrfToken(); if (tkn) h['X-CSRFToken'] = tkn; return h; })()
-        });
+    const formData = new FormData(form);
 
-        let data = null;
-        try { data = await resp.json(); } catch (e) { data = null; }
+    try {
+      const resp = await fetch('/prestamos/crear', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: (function(){
+          const h = { 'X-Requested-With': 'XMLHttpRequest' };
+          const tkn = getCsrfToken();
+          if (tkn) h['X-CSRFToken'] = tkn;
+          return h;
+        })()
+      });
 
-        if (!resp.ok) {
-          const msg = (data && data.message) ? data.message : 'No fue posible crear el préstamo.';
-          showAlert(msg, 'danger');
-          return;
-        }
+      let data = null;
+      try { data = await resp.json(); } catch (e) { data = null; }
 
-        if (data && data.success) {
-          showAlert(data.message || 'Préstamo creado correctamente.', 'success');
-          if (data.redirect) {
-            setTimeout(() => safeNavigate(data.redirect), 400);
-          } else {
-            setTimeout(() => safeNavigate('/prestamos'), 400);
-          }
-          return;
-        }
-
-        showAlert((data && data.message) ? data.message : 'No fue posible crear el préstamo.', 'warning');
-
-      } catch (e) {
-        showAlert('Error de red o del servidor.', 'danger');
+      if (!resp.ok) {
+        const msg = (data && data.message) ? data.message : 'No fue posible crear el préstamo.';
+        showAlert(msg, 'danger');
+        return;
       }
-    });
-  })();
+
+      if (data && data.success) {
+        showAlert(data.message || 'Préstamo creado correctamente.', 'success');
+        if (data.redirect) {
+          setTimeout(() => safeNavigate(data.redirect), 400);
+        } else {
+          setTimeout(() => safeNavigate('/prestamos'), 400);
+        }
+        return;
+      }
+
+      showAlert((data && data.message) ? data.message : 'No fue posible crear el préstamo.', 'warning');
+
+    } catch (e) {
+      showAlert('Error de red o del servidor.', 'danger');
+    }
+  });
+})();
 </script>
 {% endblock %}

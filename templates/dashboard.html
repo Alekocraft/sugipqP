@@ -438,9 +438,7 @@
                             </a>
                             {% endif %}
 
-                            <a href="{{ url_for('inventario_corporativo.listar_inventario_corporativo') }}" class="btn btn-success btn-lg">
-                                <i class="fas fa-search me-2"></i> Buscar Productos
-                            </a>
+                             
 
                             {% if can_access('reportes', 'view_all') or can_access('reportes', 'view_own') %}
                             <a href="/reportes/" class="btn btn-info btn-lg">
@@ -553,6 +551,31 @@
     </div>
   </div>
 </div>
+
+{% if can_access('reportes', 'view_all') or can_access('reportes', 'view_own') %}
+<!-- Modal Reportes -->
+<div class="modal fade" id="modalReportes" tabindex="-1" aria-labelledby="modalReportesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalReportesLabel">
+                    <i class="fas fa-chart-bar me-2"></i> Reportes
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-4">Accede a los reportes disponibles según tu rol.</p>
+                <div class="d-grid gap-3">
+                    <a href="/reportes/" class="btn btn-primary btn-lg">
+                        <i class="fas fa-chart-bar me-2"></i> Ver Reportes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
@@ -614,25 +637,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endblock %}
-
-<!-- Modal Reportes -->
-<div class="modal fade" id="modalReportes" tabindex="-1" aria-labelledby="modalReportesLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header bg-primary text-white rounded-top-4">
-                <h5 class="modal-title fw-bold" id="modalReportesLabel">
-                    <i class="fas fa-chart-bar me-2"></i> Reportes
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="text-muted mb-4">Accede a los reportes disponibles según tu rol.</p>
-                <div class="d-grid gap-3">
-                    <a href="/reportes/" class="btn btn-primary btn-lg">
-                        <i class="fas fa-chart-bar me-2"></i> Ver Reportes
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>

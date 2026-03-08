@@ -81,7 +81,6 @@ def listar_materiales():
     except Exception as e:
         logger.error(sanitizar_log_text(f"❌ Error obteniendo materiales: {e}"))
         
-        logger.debug(sanitizar_log_text('Traceback omitido por seguridad'))
         flash('Error al cargar los materiales', 'danger')
         # Continuar con lista vacía en lugar de fallar completamente
         materiales = []
@@ -225,7 +224,6 @@ def crear_materiales():
     except Exception as e:
         logger.error(sanitizar_log_text(f"❌ Error al crear materiales: {e}"))
         
-        logger.debug(sanitizar_log_text('Traceback omitido por seguridad'))
         flash('Error al crear los materiales', 'danger')
         return redirect('/materiales/crear')
 
@@ -323,7 +321,6 @@ def editar_material(material_id):
     except Exception as e:
         logger.error(sanitizar_log_text(f"❌ Error editando material: {e}"))
         
-        logger.debug(sanitizar_log_text('Traceback omitido por seguridad'))
         flash('Error interno al actualizar el material', 'danger')
         return redirect('/materiales')
 

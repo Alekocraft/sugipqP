@@ -378,17 +378,22 @@ def crear():
             
             usuario_id = session.get('usuario_id')
             oficina_id = session.get('oficina_id')
+            usuario_nombre = (session.get('usuario_nombre') or session.get('usuario') or '').strip()
             
             if not oficina_id:
                 flash('No se pudo determinar su oficina', 'danger')
                 return redirect('/solicitudes/crear')
+
+            if not usuario_nombre:
+                flash('No se pudo determinar el nombre del solicitante', 'danger')
+                return redirect('/solicitudes/crear')
             
-            solicitud_id = SolicitudModel.crear_solicitud(
+            solicitud_id = SolicitudModel.crear(
+                oficina_id=int(oficina_id),
                 material_id=int(material_id),
                 cantidad_solicitada=int(cantidad),
-                usuario_solicitante=usuario_id,
-                oficina_solicitante=oficina_id,
                 porcentaje_oficina=float(porcentaje_oficina),
+                usuario_nombre=usuario_nombre,
                 observacion=observacion
             )
             

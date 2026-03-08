@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Mis confirmaciones pendientes{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h3 class="mb-3">Mis confirmaciones pendientes</h3>
+
+  {% if pendientes and pendientes|length > 0 %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Asignación</th>
+            <th>Producto</th>
+            <th>Oficina</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pendientes %}
+          <tr>
+            <td>#{{ p.asignacion_id or p.AsignacionId or '' }}</td>
+            <td>{{ p.producto_nombre or p.ProductoNombre or '' }}</td>
+            <td>{{ p.oficina_nombre or p.OficinaNombre or '' }}</td>
+            <td>{{ p.estado or p.EstadoConfirmacion or 'PENDIENTE' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">No tienes confirmaciones pendientes.</div>
+  {% endif %}
+
+  <a class="btn btn-outline-primary" href="/dashboard">Volver</a>
+</div>
+{% endblock %}

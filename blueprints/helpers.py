@@ -9,6 +9,122 @@ from config.config import Config
 
 logger = logging.getLogger(__name__)
 
+# ==================== FUNCIONES HELPER PARA COBROS POP ====================
+
+def _can_view_cobros_pop() -> bool:
+    """Verifica si el usuario tiene permiso para ver el reporte de cobros"""
+    return can_access('reportes', 'cobros_view')
+
+def _can_cancel_cobros_pop() -> bool:
+    """Verifica si el usuario tiene permiso para cancelar cobros"""
+    return can_access('reportes', 'cobros_cancel')
+
+def _can_export_cobros_pop() -> bool:
+    """Verifica si el usuario tiene permiso para exportar el reporte de cobros"""
+    return can_access('reportes', 'cobros_export')
+
+def _parse_periodo(periodo_raw: str) -> str:
+    """
+    Parsea un período en formato YYYY-MM, validando que sea correcto.
+    Si no es válido, retorna el período actual.
+    """
+    try:
+        periodo_raw = (periodo_raw or '').strip()
+        if len(periodo_raw) == 7 and periodo_raw[4] == '-':
+            y = int(periodo_raw[:4])
+            m = int(periodo_raw[5:7])
+            if 1 <= m <= 12 and 2000 <= y <= 2100:
+                return f"{y:04d}-{m:02d}"
+    except Exception:
+        pass
+    return datetime.now().strftime('%Y-%m')
+
+def _periodo_to_range(periodo: str):
+    """
+    Convierte un período YYYY-MM en un rango de fechas (inicio y fin del mes)
+    """
+    y = int(periodo[:4])
+    m = int(periodo[5:7])
+    inicio = datetime(y, m, 1)
+    fin = datetime(y+1, 1, 1) if m == 12 else datetime(y, m+1, 1)
+    return inicio, fin
+
+def _consultar_cobros_pop(periodo: str, oficina_id=None):
+    """
+    Consulta los cobros por oficina y material para el período especificado.
+    Retorna una lista de diccionarios con los datos agregados.
+    """
+    inicio, fin = _periodo_to_range(periodo)
+    conn = get_database_connection()
+    if conn is None:
+        return []
+    cur = conn.cursor()
+    try:
+        where_oficina = ''
+        params = [inicio, fin]
+        if oficina_id is not None:
+            where_oficina = ' AND sm.OficinaSolicitanteId = ?'
+            params.append(oficina_id)
+
+        query = f"""
+        SELECT
+            o.OficinaId,
+            o.NombreOficina,
+            m.MaterialId,
+            m.NombreElemento,
+            CAST(m.ValorUnitario AS DECIMAL(18,2)) AS ValorUnitario,
+            CAST(sm.PorcentajeOficina AS DECIMAL(5,2)) AS PorcentajeOficina,
+            COUNT(sm.SolicitudId) AS NumSolicitudes,
+            SUM(COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)) AS CantidadTotal,
+            SUM(COALESCE(sm.ValorTotalSolicitado, (m.ValorUnitario * COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)))) AS ValorTotal,
+            SUM(COALESCE(sm.ValorOficina, (m.ValorUnitario * COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)) * (sm.PorcentajeOficina/100.0))) AS ValorCobroOficina
+        FROM dbo.SolicitudesMaterial sm
+        INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+        INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
+        INNER JOIN dbo.EstadosSolicitud es ON sm.EstadoId = es.EstadoId
+        WHERE
+            LOWER(es.NombreEstado) LIKE '%aprob%'
+            AND sm.FechaAprobacion >= ?
+            AND sm.FechaAprobacion < ?
+            {where_oficina}
+        GROUP BY
+            o.OficinaId, o.NombreOficina,
+            m.MaterialId, m.NombreElemento, m.ValorUnitario, sm.PorcentajeOficina
+        ORDER BY
+            o.NombreOficina ASC, m.NombreElemento ASC
+        """
+        cur.execute(query, params)
+        rows = cur.fetchall() or []
+        cols = [c[0] for c in cur.description]
+        out = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            out.append({
+                'oficina_id': int(d['OficinaId']),
+                'oficina_nombre': d['NombreOficina'],
+                'material_id': int(d['MaterialId']),
+                'material_nombre': d['NombreElemento'],
+                'valor_unitario': float(d['ValorUnitario'] or 0),
+                'porcentaje_oficina': float(d['PorcentajeOficina'] or 0),
+                'num_solicitudes': int(d['NumSolicitudes'] or 0),
+                'cantidad_total': int(d['CantidadTotal'] or 0),
+                'valor_total': float(d['ValorTotal'] or 0),
+                'valor_cobro_oficina': float(d['ValorCobroOficina'] or 0),
+            })
+        return out
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+# ==================== FUNCIONES HELPER EXISTENTES ====================
+
 def allowed_file(filename):
     """Valida si la extensión del archivo está permitida según configuración"""
     if not filename or '.' not in filename:
@@ -227,7 +343,6 @@ def sanitizar_ip(ip):
         logger.warning("Error sanitizando IP")
         return '[ip-protegida]'
 
-
 def sanitizar_log_text(value, max_len=500):
     """
     Neutraliza caracteres de control para evitar Log Injection (CWE-117).
@@ -256,13 +371,13 @@ def sanitizar_log_text(value, max_len=500):
     return s
 
 
-
 # Exportar las funciones de sanitización para que estén disponibles
 __all__ = [
+    '_can_view_cobros_pop', '_can_cancel_cobros_pop', '_can_export_cobros_pop',
+    '_parse_periodo', '_periodo_to_range', '_consultar_cobros_pop',
     'allowed_file', 'save_uploaded_file', 'get_user_permissions', 'can_access',
     'format_currency', 'format_date', 'get_pagination_params', 'flash_errors',
     'generate_codigo_unico', 'calcular_valor_total', 'validar_stock', 
     'obtener_mes_actual', 'sanitizar_identificacion', 'sanitizar_email', 
-    'sanitizar_username', 'sanitizar_ip',
-    'sanitizar_log_text'
+    'sanitizar_username', 'sanitizar_ip', 'sanitizar_log_text'
 ]

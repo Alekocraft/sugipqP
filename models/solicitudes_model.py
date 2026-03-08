@@ -41,16 +41,26 @@ class SolicitudModel:
     @staticmethod
     def crear_solicitud(material_id, cantidad_solicitada, usuario_solicitante, oficina_solicitante, porcentaje_oficina=100, observacion=""):
         """
-        Método wrapper para crear una solicitud con la firma esperada por el blueprint.
-        Llama internamente al método crear() con los parámetros correctos.
+        Wrapper de compatibilidad para crear una solicitud.
+
+        Acepta usuario_solicitante como nombre visible o como identificador.
+        Si recibe un texto, lo usa directamente para evitar guardar el correo
+        como solicitante cuando en sesión ya existe el nombre mostrado.
         """
-        from models.usuarios_model import UsuarioModel
-        
-        # Obtener el nombre del usuario a partir del ID
-        usuario = UsuarioModel.obtener_por_id(usuario_solicitante)
-        usuario_nombre = usuario.get('nombre') if usuario else f"Usuario_{usuario_solicitante}"
-        
-        # Llamar al método crear original con los parámetros correctos
+        usuario_nombre = ''
+
+        if isinstance(usuario_solicitante, str):
+            usuario_nombre = usuario_solicitante.strip()
+
+        if not usuario_nombre:
+            from models.usuarios_model import UsuarioModel
+            usuario = UsuarioModel.obtener_por_id(usuario_solicitante)
+            if usuario:
+                usuario_nombre = (usuario.get('nombre') or usuario.get('usuario') or '').strip()
+
+        if not usuario_nombre:
+            usuario_nombre = f"Usuario_{usuario_solicitante}"
+
         return SolicitudModel.crear(
             oficina_id=oficina_solicitante,
             material_id=material_id,

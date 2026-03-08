@@ -44,7 +44,7 @@ class NotificationService:
         "blue": "#0098B1",
         "gray": "#D9D9D9",
         "purple": "#A73493",
-        "company": "Qualitas Colombia",
+        "company": "Quálitas Compañía de Seguros Colombia S.A.",
         "app_name": "Sistema de Gestión de Inventarios",
         "logo_cid": "qualitas_logo",
     }

@@ -14,14 +14,16 @@ from models.materiales_model import MaterialModel
 from models.oficinas_model import OficinaModel
 from models.prestamos_model import PrestamosModel
 from models.novedades_model import NovedadModel
+from models.cobros_pop_model import CobroPOPMensualModel, CobroPOPDiferidoSolicitudModel, _add_months
 from utils.permissions import can_access, get_office_filter
 from utils.filters import filtrar_por_oficina_usuario
 from reportlab.lib.pagesizes import letter, landscape
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 import logging
+from database import get_database_connection
 logger = logging.getLogger(__name__)
 
 # Crear blueprint de reportes
@@ -35,6 +37,180 @@ def _can_view_reportes() -> bool:
     """Permiso general de visualización del módulo de reportes."""
     return can_access('reportes', 'view')
 
+
+# Permisos específicos: reporte de cobros POP (tesorería)
+def _can_view_cobros_pop() -> bool:
+    return can_access('reportes', 'cobros_view')
+
+def _can_cancel_cobros_pop() -> bool:
+    return can_access('reportes', 'cobros_cancel')
+
+def _can_export_cobros_pop() -> bool:
+    return can_access('reportes', 'cobros_export')
+
+
+def _parse_periodo(periodo_raw: str) -> str:
+    """Normaliza periodo en formato YYYY-MM. Si viene inválido, usa mes actual."""
+    try:
+        periodo_raw = (periodo_raw or '').strip()
+        if len(periodo_raw) == 7 and periodo_raw[4] == '-':
+            y = int(periodo_raw[:4])
+            m = int(periodo_raw[5:7])
+            if 1 <= m <= 12 and 2000 <= y <= 2100:
+                return f"{y:04d}-{m:02d}"
+    except Exception:
+        pass
+    return datetime.now().strftime('%Y-%m')
+
+
+def _periodo_to_range(periodo: str):
+    """Retorna (inicio, fin) datetime para el mes [inicio, fin)."""
+    y = int(periodo[:4]); m = int(periodo[5:7])
+    inicio = datetime(y, m, 1)
+    if m == 12:
+        fin = datetime(y+1, 1, 1)
+    else:
+        fin = datetime(y, m+1, 1)
+    return inicio, fin
+
+
+def _consultar_cobros_pop(periodo: str, oficina_id=None):
+    """Consulta detalle de cobros POP aprobados agrupado por oficina y producto."""
+    inicio, fin = _periodo_to_range(periodo)
+
+    conn = get_database_connection()
+    if conn is None:
+        return []
+    cur = conn.cursor()
+    try:
+        where_oficina = ''
+        params = [inicio, fin]
+        if oficina_id is not None:
+            where_oficina = ' AND sm.OficinaSolicitanteId = ?'
+            params.append(oficina_id)
+
+        query = f"""
+        SELECT
+            o.OficinaId,
+            o.NombreOficina,
+            m.MaterialId,
+            m.NombreElemento,
+            CAST(m.ValorUnitario AS DECIMAL(18,2)) AS ValorUnitario,
+            CAST(sm.PorcentajeOficina AS DECIMAL(5,2)) AS PorcentajeOficina,
+            COUNT(sm.SolicitudId) AS NumSolicitudes,
+            SUM(COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)) AS CantidadTotal,
+            SUM(COALESCE(sm.ValorTotalSolicitado, (m.ValorUnitario * COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)))) AS ValorTotal,
+            SUM(COALESCE(sm.ValorOficina, (m.ValorUnitario * COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)) * (sm.PorcentajeOficina/100.0))) AS ValorCobroOficina
+        FROM dbo.SolicitudesMaterial sm
+        INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+        INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
+        INNER JOIN dbo.EstadosSolicitud es ON sm.EstadoId = es.EstadoId
+        WHERE
+            LOWER(es.NombreEstado) LIKE '%aprob%'
+            AND sm.FechaAprobacion >= ?
+            AND sm.FechaAprobacion < ?
+            {where_oficina}
+        GROUP BY
+            o.OficinaId, o.NombreOficina,
+            m.MaterialId, m.NombreElemento, m.ValorUnitario, sm.PorcentajeOficina
+        ORDER BY
+            o.NombreOficina ASC, m.NombreElemento ASC
+        """
+
+        cur.execute(query, params)
+        rows = cur.fetchall() or []
+        cols = [c[0] for c in cur.description]
+        out = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            out.append({
+                'oficina_id': int(d['OficinaId']),
+                'oficina_nombre': d['NombreOficina'],
+                'material_id': int(d['MaterialId']),
+                'material_nombre': d['NombreElemento'],
+                'valor_unitario': float(d['ValorUnitario'] or 0),
+                'porcentaje_oficina': float(d['PorcentajeOficina'] or 0),
+                'num_solicitudes': int(d['NumSolicitudes'] or 0),
+                'cantidad_total': int(d['CantidadTotal'] or 0),
+                'valor_total': float(d['ValorTotal'] or 0),
+                'valor_cobro_oficina': float(d['ValorCobroOficina'] or 0),
+            })
+        return out
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+
+
+def _consultar_cobros_pop_solicitudes(periodo: str, oficina_id=None):
+    """Detalle por solicitud del cobro POP del periodo."""
+    inicio, fin = _periodo_to_range(periodo)
+    conn = get_database_connection()
+    if conn is None:
+        return []
+    cur = conn.cursor()
+    try:
+        where_oficina = ''
+        params = [inicio, fin]
+        if oficina_id is not None:
+            where_oficina = ' AND sm.OficinaSolicitanteId = ?'
+            params.append(int(oficina_id))
+        query = f"""
+        SELECT
+            sm.SolicitudId,
+            o.OficinaId,
+            o.NombreOficina,
+            MIN(sm.FechaAprobacion) AS FechaAprobacion,
+            MAX(CAST(sm.PorcentajeOficina AS DECIMAL(5,2))) AS PorcentajeOficina,
+            COUNT(*) AS NumeroRegistros,
+            SUM(COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)) AS CantidadTotal,
+            SUM(COALESCE(sm.ValorTotalSolicitado, (m.ValorUnitario * COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)))) AS ValorTotal,
+            SUM(COALESCE(sm.ValorOficina, (m.ValorUnitario * COALESCE(sm.CantidadEntregada, sm.CantidadSolicitada)) * (sm.PorcentajeOficina/100.0))) AS ValorCobroOficina
+        FROM dbo.SolicitudesMaterial sm
+        INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+        INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
+        INNER JOIN dbo.EstadosSolicitud es ON sm.EstadoId = es.EstadoId
+        WHERE LOWER(es.NombreEstado) LIKE '%aprob%'
+          AND sm.FechaAprobacion >= ?
+          AND sm.FechaAprobacion < ?
+          {where_oficina}
+        GROUP BY sm.SolicitudId, o.OficinaId, o.NombreOficina
+        ORDER BY o.NombreOficina ASC, sm.SolicitudId ASC
+        """
+        cur.execute(query, params)
+        rows = cur.fetchall() or []
+        cols = [c[0] for c in cur.description]
+        out = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            out.append({
+                'solicitud_id': int(d['SolicitudId']),
+                'oficina_id': int(d['OficinaId']),
+                'oficina_nombre': d['NombreOficina'],
+                'fecha_aprobacion': d['FechaAprobacion'],
+                'porcentaje_oficina': float(d['PorcentajeOficina'] or 0),
+                'numero_registros': int(d['NumeroRegistros'] or 0),
+                'cantidad_total': int(d['CantidadTotal'] or 0),
+                'valor_total': float(d['ValorTotal'] or 0),
+                'valor_cobro_oficina': float(d['ValorCobroOficina'] or 0),
+            })
+        return out
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 # Helper para aplicar filtros según permisos
 def aplicar_filtro_permisos(datos, campo_oficina='oficina_id'):
@@ -711,15 +887,41 @@ def reporte_oficinas():
         cursor = conn.cursor()
         
         
-        cursor.execute("""
-            SELECT 
-                OficinaId,
-                NombreOficina,
-                Ubicacion
-            FROM Oficinas
-            WHERE Activo = 1
-            ORDER BY NombreOficina
-        """)
+        # Aplicar filtro de oficina según permisos (all vs own)
+        office_filter = get_office_filter()
+        oficina_usuario_id = session.get('oficina_id')
+
+        if office_filter == 'own':
+            if not oficina_usuario_id:
+                flash('No se pudo determinar la oficina del usuario para filtrar el reporte.', 'warning')
+                cursor.execute("""
+                    SELECT 
+                        OficinaId,
+                        NombreOficina,
+                        Ubicacion
+                    FROM Oficinas
+                    WHERE 1 = 0
+                """)
+            else:
+                cursor.execute("""
+                    SELECT 
+                        OficinaId,
+                        NombreOficina,
+                        Ubicacion
+                    FROM Oficinas
+                    WHERE Activo = 1 AND OficinaId = ?
+                    ORDER BY NombreOficina
+                """, (oficina_usuario_id,))
+        else:
+            cursor.execute("""
+                SELECT 
+                    OficinaId,
+                    NombreOficina,
+                    Ubicacion
+                FROM Oficinas
+                WHERE Activo = 1
+                ORDER BY NombreOficina
+            """)
         
         oficinas_data = []
         for row in cursor.fetchall():
@@ -2701,3 +2903,390 @@ def reporte_inventario_corporativo():
                              total_confirmados=0,
                              total_pendientes=0,
                              valor_total=0)
+
+# ================================
+# REPORTE DE COBROS POP (TESORERÍA)
+# ================================
+
+@reportes_bp.route('/cobros-pop')
+def reporte_cobros_pop():
+    """Cobros POP por periodo/oficina con detalle y diferido por solicitud."""
+    if not _require_login():
+        return redirect(url_for('auth.login'))
+
+    if not _can_view_cobros_pop():
+        flash('No tiene permisos para ver el reporte de cobros', 'warning')
+        return redirect('/reportes')
+
+    periodo = _parse_periodo(request.args.get('periodo', ''))
+
+    try:
+        detalle = _consultar_cobros_pop(periodo)
+        solicitudes = _consultar_cobros_pop_solicitudes(periodo)
+        estados = CobroPOPMensualModel.obtener_estados_por_periodo(periodo)
+        cuotas_resumen = CobroPOPDiferidoSolicitudModel.obtener_resumen_cuotas_periodo(periodo)
+
+        oficinas = {}
+        for row in detalle:
+            oid = row['oficina_id']
+            if oid not in oficinas:
+                st = estados.get(oid, {})
+                oficinas[oid] = {
+                    'oficina_id': oid,
+                    'oficina_nombre': row['oficina_nombre'],
+                    'estado_cobro': st.get('estado', 'PENDIENTE'),
+                    'estado_fecha': st.get('fecha_cambio'),
+                    'estado_usuario': st.get('usuario_cambio'),
+                    'productos': [],
+                    'solicitudes': [],
+                    'planes': [],
+                    'cuotas_mes': [],
+                    'estado_cuota_mes': None,
+                    'total_solicitudes': 0,
+                    'total_productos': 0,
+                    'total_cantidad': 0,
+                    'total_valor_total': 0.0,
+                    'total_valor_cobro': 0.0,
+                    'total_cuota_mes': 0.0,
+                    'total_a_pagar': 0.0,
+                }
+            oficinas[oid]['productos'].append(row)
+            oficinas[oid]['total_solicitudes'] += row['num_solicitudes']
+            oficinas[oid]['total_cantidad'] += row['cantidad_total']
+            oficinas[oid]['total_valor_total'] += row['valor_total']
+            oficinas[oid]['total_valor_cobro'] += row['valor_cobro_oficina']
+
+        for s in solicitudes:
+            oid = s['oficina_id']
+            if oid not in oficinas:
+                st = estados.get(oid, {})
+                oficinas[oid] = {
+                    'oficina_id': oid,
+                    'oficina_nombre': s['oficina_nombre'],
+                    'estado_cobro': st.get('estado', 'PENDIENTE'),
+                    'estado_fecha': st.get('fecha_cambio'),
+                    'estado_usuario': st.get('usuario_cambio'),
+                    'productos': [],
+                    'solicitudes': [],
+                    'planes': [],
+                    'cuotas_mes': [],
+                    'estado_cuota_mes': None,
+                    'total_solicitudes': 0,
+                    'total_productos': 0,
+                    'total_cantidad': 0,
+                    'total_valor_total': 0.0,
+                    'total_valor_cobro': 0.0,
+                    'total_cuota_mes': 0.0,
+                    'total_a_pagar': 0.0,
+                }
+            oficinas[oid]['solicitudes'].append(s)
+
+        oficina_ids = sorted(oficinas.keys())
+        planes_map = CobroPOPDiferidoSolicitudModel.obtener_planes_y_cuotas_oficinas(oficina_ids) if oficina_ids else {}
+
+        for oid, of in oficinas.items():
+            of['total_productos'] = len(of['productos'])
+            q = cuotas_resumen.get(oid, {})
+            of['total_cuota_mes'] = float(q.get('total_cuota_mes') or 0)
+            of['estado_cuota_mes'] = q.get('estado_cuota_mes')
+            of['cuotas_mes'] = q.get('cuotas_mes') or []
+            of['planes'] = (planes_map.get(oid) or {}).get('planes') or []
+            planes_by_solicitud = {}
+            for p in of['planes']:
+                planes_by_solicitud.setdefault(int(p['solicitud_id']), []).append(p)
+            for s in of['solicitudes']:
+                sp = planes_by_solicitud.get(int(s['solicitud_id']), [])
+                s['planes'] = sp
+                s['tiene_diferido_activo'] = len(sp) > 0
+                s['puede_diferir'] = float(s.get('valor_cobro_oficina') or 0) > 0 and not s['tiene_diferido_activo']
+                s['inicio_actual'] = periodo
+                s['inicio_proximo'] = _add_months(periodo, 1)
+            of['total_a_pagar'] = float(of['total_valor_cobro'] or 0) + float(of['total_cuota_mes'] or 0)
+
+        oficinas_list = sorted(oficinas.values(), key=lambda x: (x['oficina_nombre'] or '').lower())
+        total_general = {
+            'total_oficinas': len(oficinas_list),
+            'total_solicitudes': sum(len(o.get('solicitudes') or []) for o in oficinas_list),
+            'total_productos': sum(o['total_productos'] for o in oficinas_list),
+            'total_valor_total': sum(o['total_valor_total'] for o in oficinas_list),
+            'total_valor_cobro': sum(o['total_valor_cobro'] for o in oficinas_list),
+            'total_valor_cuotas': sum(float(o.get('total_cuota_mes') or 0) for o in oficinas_list),
+            'total_a_pagar': sum(float(o.get('total_a_pagar') or 0) for o in oficinas_list),
+        }
+
+        return render_template(
+            'reportes/cobros_pop.html',
+            periodo=periodo,
+            oficinas=oficinas_list,
+            total_general=total_general,
+            can_cancel=_can_cancel_cobros_pop(),
+            can_export=_can_export_cobros_pop(),
+        )
+    except Exception:
+        logger.exception('Error cargando cobros POP')
+        flash('Error al cargar el reporte de cobros', 'danger')
+        return redirect('/reportes')
+
+
+@reportes_bp.route('/cobros-pop/estado', methods=['POST'])
+def actualizar_estado_cobro_pop():
+    if not _require_login():
+        return jsonify({'success': False, 'message': 'No autenticado'}), 401
+    if not _can_cancel_cobros_pop():
+        return jsonify({'success': False, 'message': 'Sin permisos'}), 403
+    data = request.get_json(silent=True) or request.form
+    periodo = _parse_periodo(data.get('periodo', ''))
+    oficina_id = data.get('oficina_id')
+    estado = (data.get('estado') or 'CANCELADO').strip().upper()
+    try:
+        oficina_id_int = int(oficina_id)
+    except Exception:
+        return jsonify({'success': False, 'message': 'Oficina inválida'}), 400
+    usuario = session.get('usuario_nombre') or session.get('usuario_email') or 'Sistema'
+    ok, msg = CobroPOPMensualModel.set_estado(periodo, oficina_id_int, estado, usuario)
+    return jsonify({'success': ok, 'message': msg}), (200 if ok else 400)
+
+
+@reportes_bp.route('/cobros-pop/estado-todos', methods=['POST'])
+def actualizar_estado_cobro_pop_todos():
+    if not _require_login():
+        return jsonify({'success': False, 'message': 'No autenticado'}), 401
+    if not _can_cancel_cobros_pop():
+        return jsonify({'success': False, 'message': 'Sin permisos'}), 403
+    data = request.get_json(silent=True) or request.form
+    periodo = _parse_periodo(data.get('periodo', ''))
+    estado = (data.get('estado') or 'CANCELADO').strip().upper()
+    detalle = _consultar_cobros_pop(periodo)
+    oficina_ids = sorted({r['oficina_id'] for r in detalle})
+    usuario = session.get('usuario_nombre') or session.get('usuario_email') or 'Sistema'
+    ok, msg = CobroPOPMensualModel.set_estado_masivo(periodo, oficina_ids, estado, usuario)
+    return jsonify({'success': ok, 'message': msg}), (200 if ok else 400)
+
+
+@reportes_bp.route('/cobros-pop/diferir-solicitud', methods=['POST'])
+def cobros_pop_diferir_solicitud():
+    if not _require_login():
+        return jsonify({'success': False, 'message': 'No autenticado'}), 401
+    if not _can_cancel_cobros_pop():
+        return jsonify({'success': False, 'message': 'Sin permisos'}), 403
+
+    data = request.get_json(silent=True) or request.form
+    periodo = _parse_periodo(data.get('periodo', ''))
+    oficina_id = data.get('oficina_id')
+    solicitud_id = data.get('solicitud_id')
+    cuotas = data.get('cuotas')
+    inicio_tipo = (data.get('inicio_tipo') or 'actual').strip().lower()
+    try:
+        oficina_id = int(oficina_id)
+        solicitud_id = int(solicitud_id)
+        cuotas = int(cuotas)
+    except Exception:
+        return jsonify({'success': False, 'message': 'Datos inválidos'}), 400
+
+    detalle = _consultar_cobros_pop_solicitudes(periodo, oficina_id=oficina_id)
+    solicitud = next((x for x in detalle if int(x['solicitud_id']) == solicitud_id), None)
+    if not solicitud:
+        return jsonify({'success': False, 'message': 'No se encontró la solicitud en el periodo/oficina'}), 404
+    total = float(solicitud.get('valor_cobro_oficina') or 0)
+    if total <= 0:
+        return jsonify({'success': False, 'message': 'La solicitud no tiene valor a diferir'}), 400
+
+    periodo_inicio = periodo if inicio_tipo == 'actual' else _add_months(periodo, 1)
+    usuario = session.get('usuario_nombre') or session.get('usuario_email') or 'Sistema'
+    ok, msg = CobroPOPDiferidoSolicitudModel.crear_plan(solicitud_id, oficina_id, periodo, total, cuotas, periodo_inicio, usuario)
+    if not ok:
+        logger.warning('No se pudo crear diferido POP. oficina_id=%s solicitud_id=%s periodo=%s inicio=%s motivo=%s', oficina_id, solicitud_id, periodo, periodo_inicio, msg)
+        return jsonify({'success': False, 'message': msg}), 400
+    parts = (msg or '').split('|')
+    return jsonify({
+        'success': True,
+        'message': 'Diferido creado correctamente',
+        'plan_id': int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None,
+        'valor_cuota': float(parts[2]) if len(parts) > 2 else 0,
+        'periodo_inicio': periodo_inicio,
+        'total_diferido': total,
+        'numero_cuotas': cuotas,
+    }), 200
+
+
+@reportes_bp.route('/cobros-pop/cuota/pagar-mes', methods=['POST'])
+def cobros_pop_pagar_cuotas_mes():
+    if not _require_login():
+        return jsonify({'success': False, 'message': 'No autenticado'}), 401
+    if not _can_cancel_cobros_pop():
+        return jsonify({'success': False, 'message': 'Sin permisos'}), 403
+    data = request.get_json(silent=True) or request.form
+    periodo = _parse_periodo(data.get('periodo', ''))
+    oficina_id = data.get('oficina_id')
+    pagado = bool(data.get('pagado', True))
+    try:
+        oficina_id = int(oficina_id)
+    except Exception:
+        return jsonify({'success': False, 'message': 'Oficina inválida'}), 400
+    usuario = session.get('usuario_nombre') or session.get('usuario_email') or 'Sistema'
+    ok, msg = CobroPOPDiferidoSolicitudModel.set_pago_mes(oficina_id, periodo, pagado, usuario)
+    return jsonify({'success': ok, 'message': msg, 'periodo': periodo}), (200 if ok else 400)
+
+
+@reportes_bp.route('/cobros-pop/export/<string:formato>')
+def exportar_cobros_pop(formato: str):
+    if not _require_login():
+        return redirect(url_for('auth.login'))
+    if not _can_export_cobros_pop():
+        flash('No tiene permisos para exportar cobros', 'warning')
+        return redirect('/reportes')
+
+    formato = (formato or '').strip().lower()
+    if formato not in ('excel', 'pdf'):
+        flash('Formato de exportación no válido', 'danger')
+        return redirect('/reportes/cobros-pop')
+
+    periodo = _parse_periodo(request.args.get('periodo', ''))
+    oficina_id_raw = request.args.get('oficina_id')
+    oficina_id = None
+    if oficina_id_raw:
+        try:
+            oficina_id = int(oficina_id_raw)
+        except Exception:
+            oficina_id = None
+
+    detalle = _consultar_cobros_pop_solicitudes(periodo, oficina_id=oficina_id)
+    estados = CobroPOPMensualModel.obtener_estados_por_periodo(periodo)
+    oficina_ids = sorted({int(r['oficina_id']) for r in detalle})
+    planes_map = CobroPOPDiferidoSolicitudModel.obtener_planes_y_cuotas_oficinas(oficina_ids) if oficina_ids else {}
+
+    filas = []
+    for r in detalle:
+        st = estados.get(r['oficina_id'], {})
+        planes_oficina = (planes_map.get(int(r['oficina_id'])) or {}).get('planes') or []
+        planes_solicitud = [p for p in planes_oficina if int(p.get('solicitud_id') or 0) == int(r['solicitud_id']) and p.get('activo')]
+        plan = planes_solicitud[0] if planes_solicitud else None
+        cuota_mes = None
+        if plan:
+            for cuota in plan.get('cuotas') or []:
+                if (cuota.get('periodo') or '') == periodo:
+                    cuota_mes = cuota
+                    break
+        numero_cuotas_plan = int(plan.get('numero_cuotas') or 0) if plan else 0
+        cuota_actual_numero = int(cuota_mes.get('numero_cuota') or 0) if cuota_mes else 0
+        if plan and cuota_mes:
+            cuota_actual_texto = f"{cuota_actual_numero} de {numero_cuotas_plan}"
+            cuotas_faltantes = max(numero_cuotas_plan - cuota_actual_numero, 0)
+        elif plan and (periodo or '') < (plan.get('periodo_inicio') or ''):
+            cuota_actual_texto = 'AUN NO INICIA'
+            cuotas_faltantes = numero_cuotas_plan
+        elif plan and (periodo or '') > (plan.get('periodo_fin') or ''):
+            cuota_actual_texto = 'FINALIZADO'
+            cuotas_faltantes = 0
+        else:
+            cuota_actual_texto = 'N/A' if not plan else 'SIN CUOTA EN EL MES'
+            cuotas_faltantes = numero_cuotas_plan if plan else 0
+
+        filas.append({
+            'Periodo': periodo,
+            'Oficina': r['oficina_nombre'],
+            'SolicitudId': r['solicitud_id'],
+            'Estado Cobro': (st.get('estado') or 'PENDIENTE'),
+            'FechaAprobacion': r['fecha_aprobacion'],
+            'Cantidad Total': r['cantidad_total'],
+            'Items': r['numero_registros'],
+            '% Oficina': r['porcentaje_oficina'],
+            'Valor Total': r['valor_total'],
+            'Valor a Cobrar Oficina': r['valor_cobro_oficina'],
+            'Tiene Diferido': 'SI' if plan else 'NO',
+            'Inicio Diferido': plan.get('periodo_inicio') if plan else '',
+            'Fin Diferido': plan.get('periodo_fin') if plan else '',
+            'No. Cuotas': numero_cuotas_plan,
+            'Cuota Actual': cuota_actual_texto,
+            'Cuotas Faltantes': cuotas_faltantes,
+            'Valor Cuota Mes': float(cuota_mes.get('valor_cuota') or 0) if cuota_mes else 0.0,
+            'Estado Cuota Mes': 'PAGADO' if cuota_mes and cuota_mes.get('pagado') else ('PENDIENTE' if cuota_mes else 'N/A'),
+        })
+
+    if not filas:
+        flash('No hay datos para exportar en el periodo seleccionado', 'warning')
+        return redirect(f'/reportes/cobros-pop?periodo={periodo}')
+
+    if formato == 'excel':
+        df = pd.DataFrame(filas)
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Cobros_POP', index=False)
+        output.seek(0)
+        fecha = datetime.now().strftime('%Y%m%d_%H%M%S')
+        suf = f'_oficina_{oficina_id}' if oficina_id else ''
+        filename = f'reporte_cobros_pop_{periodo}{suf}_{fecha}.xlsx'
+        return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=filename)
+
+    try:
+        import io
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=0.5*inch, bottomMargin=0.5*inch, leftMargin=0.5*inch, rightMargin=0.5*inch)
+        styles = getSampleStyleSheet()
+        title_style = styles['Title']
+        normal_style = styles['BodyText']
+        small_style = ParagraphStyle('SmallCell', parent=normal_style, fontSize=7.5, leading=9)
+        header_style = ParagraphStyle('HeaderCell', parent=styles['Heading5'], fontName='Helvetica-Bold', fontSize=8, leading=9, textColor=colors.white, alignment=1)
+
+        story = [
+            Paragraph(f'Reporte Cobros POP - {periodo}', title_style),
+            Paragraph('El PDF muestra el avance del diferido: cuota actual y cuotas faltantes por solicitud.', normal_style),
+            Spacer(1, 0.15*inch)
+        ]
+
+        data = [[
+            Paragraph('Oficina', header_style),
+            Paragraph('Solicitud', header_style),
+            Paragraph('Estado<br/>cobro', header_style),
+            Paragraph('Diferido', header_style),
+            Paragraph('Inicio', header_style),
+            Paragraph('Plan<br/>cuotas', header_style),
+            Paragraph('Cuota<br/>actual', header_style),
+            Paragraph('Faltan', header_style),
+            Paragraph('Valor cuota<br/>mes', header_style),
+            Paragraph('Estado cuota<br/>mes', header_style),
+            Paragraph('Valor<br/>cobro', header_style),
+        ]]
+
+        for f in filas:
+            data.append([
+                Paragraph(str(f['Oficina']), small_style),
+                Paragraph(str(f['SolicitudId']), small_style),
+                Paragraph(str(f['Estado Cobro']), small_style),
+                Paragraph(str(f['Tiene Diferido']), small_style),
+                Paragraph(str(f['Inicio Diferido'] or ''), small_style),
+                Paragraph(str(f"{int(f['No. Cuotas'] or 0)}"), small_style),
+                Paragraph(str(f['Cuota Actual'] or ''), small_style),
+                Paragraph(str(f['Cuotas Faltantes'] or 0), small_style),
+                Paragraph(f"{float(f['Valor Cuota Mes']):,.2f}", small_style),
+                Paragraph(str(f['Estado Cuota Mes']), small_style),
+                Paragraph(f"{float(f['Valor a Cobrar Oficina']):,.2f}", small_style),
+            ])
+
+        col_widths = [1.45*inch, 0.72*inch, 0.78*inch, 0.6*inch, 0.7*inch, 0.62*inch, 0.9*inch, 0.55*inch, 0.95*inch, 0.92*inch, 0.9*inch]
+        table = Table(data, repeatRows=1, colWidths=col_widths)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#4f5b66')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 8),
+            ('FONTSIZE', (0,1), (-1,-1), 7.5),
+            ('GRID', (0,0), (-1,-1), 0.25, colors.black),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (1,1), (1,-1), 'CENTER'),
+            ('ALIGN', (3,1), (7,-1), 'CENTER'),
+            ('ALIGN', (8,1), (10,-1), 'RIGHT'),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.whitesmoke, colors.HexColor('#eef2f7')]),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ]))
+        story.append(table)
+        doc.build(story)
+        buffer.seek(0)
+        fecha = datetime.now().strftime('%Y%m%d_%H%M%S')
+        suf = f'_oficina_{oficina_id}' if oficina_id else ''
+        filename = f'reporte_cobros_pop_{periodo}{suf}_{fecha}.pdf'
+        return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=filename)
+    except Exception:
+        flash('Error al generar el PDF de cobros', 'danger')
+        return redirect(f'/reportes/cobros-pop?periodo={periodo}')

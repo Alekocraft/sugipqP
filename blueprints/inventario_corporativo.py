@@ -443,7 +443,8 @@ def asignar_inventario_corporativo(producto_id):
             usuario_ad_username = request.form.get('usuario_ad_username', '').strip()
             usuario_ad_nombre = request.form.get('usuario_ad_nombre', '').strip()
             usuario_ad_email = request.form.get('usuario_ad_email', '').strip()
-            enviar_notificacion = request.form.get('enviar_notificacion') == 'on'
+            raw_notif = (request.form.get('enviar_notificacion') or '').strip().lower()
+            enviar_notificacion = raw_notif in ('1', 'true', 'on', 'yes', 'y', 'si')
 
             if cantidad_asignar > producto.get('cantidad', 0):
                 flash('No hay suficiente stock.', 'danger')

@@ -95,7 +95,7 @@
                                             <h6>Configuración LDAP:</h6>
                                             <ul class="list-unstyled">
                                                 <li><strong>Habilitado:</strong> {{ 'Sí' if result.ldap_enabled else ('No' if result.ldap_enabled is not none else 'No configurado') }}</li>
-                                                <li><strong>Servidor:</strong> {{ result.ldap_server | default('No configurado', true) }}</li>
+                                                 
                                                 <li><strong>Dominio:</strong> {{ result.ldap_domain | default('No configurado', true) }}</li>
                                              </ul>
                                         </div>

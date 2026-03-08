@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 def require_login() -> bool:
     """Retorna True si existe sesión de usuario."""
     is_authenticated = ('user_id' in session) or ('usuario_id' in session)
-    logger.debug("Verificación de autenticación: %s", sanitizar_log_text(is_authenticated))
     return bool(is_authenticated)
 
 
@@ -30,12 +29,6 @@ def has_role(*roles: str) -> bool:
     target_roles = [str(r).strip().lower() for r in roles if r is not None]
 
     has_valid_role = (user_role in target_roles) if target_roles else False
-    logger.debug(
-        "Usuario rol '%s' tiene alguno de %s: %s",
-        sanitizar_log_text(user_role),
-        sanitizar_log_text(target_roles),
-        sanitizar_log_text(has_valid_role),
-    )
     return bool(has_valid_role)
 
 
@@ -51,10 +44,6 @@ def login_required(f):
             flash('Por favor inicie sesión para acceder a esta página.', 'warning')
             return redirect(url_for('auth_bp.login', next=request.url))
 
-        logger.debug(
-            "Acceso autorizado a %s",
-            sanitizar_log_text(getattr(request, 'endpoint', '') or ''),
-        )
         return f(*args, **kwargs)
     return decorated_function
 
@@ -82,10 +71,6 @@ def roles_required(*roles: str):
                 flash('No tiene permisos para acceder a esta página.', 'danger')
                 return redirect(url_for('dashboard'))
 
-            logger.debug(
-                "Acceso autorizado con rol a %s",
-                sanitizar_log_text(getattr(request, 'endpoint', '') or ''),
-            )
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -98,11 +83,6 @@ def get_user_data() -> dict:
         'nombre': session.get('usuario_nombre') or session.get('nombre') or '',
         'rol': session.get('rol') or '',
     }
-    logger.debug(
-        "Datos de usuario obtenidos: %s (%s)",
-        sanitizar_username(user_data.get('nombre')),
-        sanitizar_log_text(user_data.get('rol')),
-    )
     return user_data
 
 
@@ -115,10 +95,4 @@ def can_access_module(module_name: str) -> bool:
     except Exception:
         allowed = False
 
-    logger.debug(
-        "Acceso a módulo '%s' para rol '%s': %s",
-        sanitizar_log_text(module_norm),
-        sanitizar_log_text((session.get('rol') or '')),
-        sanitizar_log_text(allowed),
-    )
     return bool(allowed)

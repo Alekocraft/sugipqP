@@ -79,7 +79,7 @@ ADMIN_PERMS = {
             "return",
             "manage_materials",
         ],
-        "reportes": ["view_all", "view_own"],
+        "reportes": ["view_all", "view_own", "cobros_view", "cobros_cancel", "cobros_export"],
         "inventario_corporativo": [
             "view",
             "create",
@@ -151,10 +151,18 @@ APPROVER_LIKE_PERMS = {
     "office_filter": "all",
 }
 
+
+# Líder de inventario: igual a aprobador-like, pero con permisos de cobros POP (tesorería)
+LIDER_INVENTARIO_PERMS = deepcopy(APPROVER_LIKE_PERMS)
+LIDER_INVENTARIO_PERMS.setdefault('actions', {}).setdefault('reportes', [])
+for _perm in ('cobros_view', 'cobros_cancel', 'cobros_export'):
+    if _perm not in LIDER_INVENTARIO_PERMS['actions']['reportes']:
+        LIDER_INVENTARIO_PERMS['actions']['reportes'].append(_perm)
+
 # Tesorería: solo reportes
 TREASURY_PERMS = {
     "modules": ["dashboard", "reportes"],
-    "actions": {"reportes": ["view_all"]},
+    "actions": {"reportes": ["view_all", "cobros_view", "cobros_cancel", "cobros_export"]},
     "office_filter": "all",
 }
 
@@ -203,7 +211,7 @@ OFFICE_BASE_PERMS = {
 ROLE_PERMISSIONS = {
     "administrador": deepcopy(ADMIN_PERMS),
     "aprobador": deepcopy(APPROVER_LIKE_PERMS),
-    "lider_inventario": deepcopy(APPROVER_LIKE_PERMS),
+    "lider_inventario": deepcopy(LIDER_INVENTARIO_PERMS),
     "tesoreria": deepcopy(TREASURY_PERMS),
 }
 

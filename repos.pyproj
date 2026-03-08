@@ -50,6 +50,7 @@
     <Content Include="templates\materials\crear.html" />
     <Content Include="templates\materials\listar.html" />
     <Content Include="templates\oficinas\listar.html" />
+    <Content Include="templates\reportes\cobros_pop.html" />
     <Content Include="templates\reportes\index.html" />
     <Content Include="templates\reportes\materiales.html" />
     <Content Include="templates\reportes\material_detalle.html" />
@@ -85,8 +86,8 @@
     <Compile Include="config\permissions.py" />
     <Compile Include="config\__init__.py" />
     <Compile Include="database.py" />
+    <Compile Include="models\cobros_pop_model.py" />
     <Compile Include="models\confirmacion_asignaciones_model.py" />
-    <Compile Include="models\generar_hash.py" />
     <Compile Include="models\inventario_corporativo_model_extended.py" />
     <Compile Include="models\materiales_model.py" />
     <Compile Include="models\novedades_model.py" />
@@ -138,15 +139,6 @@
       <Id>env13</Id>
       <Version>3.13</Version>
       <Description>env13 (Python 3.13 (64-bit))</Description>
-      <InterpreterPath>Scripts\python.exe</InterpreterPath>
-      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
-      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
-      <Architecture>X64</Architecture>
-    </Interpreter>
-    <Interpreter Include="envt2\">
-      <Id>envt2</Id>
-      <Version>3.9</Version>
-      <Description>envt2 (Python 3.9 (64-bit))</Description>
       <InterpreterPath>Scripts\python.exe</InterpreterPath>
       <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
       <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>

@@ -9,6 +9,39 @@ from utils.helpers import sanitizar_log_text, sanitizar_username, sanitizar_emai
 from config.config import Config  
 from utils.helpers import sanitizar_email, sanitizar_username, sanitizar_ip, sanitizar_identificacion
 
+
+def _get_column_maxlen(cursor, table: str, column: str):
+    """Obtiene el tamaño máximo (CHARACTER_MAXIMUM_LENGTH) de una columna.
+
+    Devuelve None si no se encuentra o si no aplica (p.ej. tipos sin longitud).
+    """
+    try:
+        cursor.execute(
+            """
+            SELECT CHARACTER_MAXIMUM_LENGTH
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = ? AND COLUMN_NAME = ?
+            """,
+            (table, column),
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+def _to_int(value, default=None):
+    """Convierte a int de forma segura."""
+    try:
+        if value is None:
+            return default
+        s = str(value).strip()
+        if s == "":
+            return default
+        return int(s)
+    except Exception:
+        return default
+
 def _get_roles_disponibles():
     """Lista de roles para creación/edición.
 
@@ -138,7 +171,7 @@ def listar_usuarios():
             FROM Usuarios u
             LEFT JOIN Oficinas o ON u.OficinaId = o.OficinaId
             LEFT JOIN Aprobadores a ON u.AprobadorId = a.AprobadorId
-            ORDER BY u.Activo DESC, u.NombreUsuario
+            ORDER BY u.UsuarioId ASC
         """)
         
         usuarios = []
@@ -269,6 +302,33 @@ def crear_usuario():
                 if not usuario_data['password']:
                     flash('La contraseña es obligatoria para usuarios locales', 'danger')
                     return redirect('/usuarios/crear')
+
+                # Normalizar/validar oficina
+                oficina_id_int = _to_int(usuario_data.get('oficina_id'), None)
+                if not oficina_id_int or oficina_id_int <= 0:
+                    flash('Debe seleccionar una oficina válida', 'danger')
+                    return redirect('/usuarios/crear')
+                cursor.execute("SELECT COUNT(*) FROM Oficinas WHERE OficinaId = ? AND Activo = 1", (oficina_id_int,))
+                if cursor.fetchone()[0] == 0:
+                    flash('Debe seleccionar una oficina válida', 'danger')
+                    return redirect('/usuarios/crear')
+                usuario_data['oficina_id'] = oficina_id_int
+
+                # Validaciones de longitud según esquema real de BD
+                maxlen_user = _get_column_maxlen(cursor, 'Usuarios', 'NombreUsuario')
+                if maxlen_user and len(usuario_data['usuario']) > int(maxlen_user):
+                    flash(f'El nombre de usuario es demasiado largo (máx. {maxlen_user} caracteres)', 'danger')
+                    return redirect('/usuarios/crear')
+
+                maxlen_email = _get_column_maxlen(cursor, 'Usuarios', 'CorreoElectronico')
+                if usuario_data['email'] and maxlen_email and len(usuario_data['email']) > int(maxlen_email):
+                    flash(f'El correo es demasiado largo (máx. {maxlen_email} caracteres)', 'danger')
+                    return redirect('/usuarios/crear')
+
+                maxlen_rol = _get_column_maxlen(cursor, 'Usuarios', 'Rol')
+                if usuario_data['rol'] and maxlen_rol and len(usuario_data['rol']) > int(maxlen_rol):
+                    flash(f'El rol seleccionado es demasiado largo para la base de datos (máx. {maxlen_rol} caracteres).', 'danger')
+                    return redirect('/usuarios/crear')
                 
                 
                 usuario_sanitizado = sanitizar_username(usuario_data['usuario'])
@@ -326,6 +386,35 @@ def crear_usuario():
                 if not usuario_ldap:
                     flash('El nombre de usuario LDAP es obligatorio', 'danger')
                     return redirect('/usuarios/crear')
+
+                # Normalizar/validar oficina (muchas UIs envían "0" como "Seleccione")
+                oficina_id_ldap_int = _to_int(oficina_id_ldap, None)
+                if not oficina_id_ldap_int or oficina_id_ldap_int <= 0:
+                    flash('Debe seleccionar una oficina válida para el usuario LDAP', 'danger')
+                    return redirect('/usuarios/crear')
+                cursor.execute("SELECT COUNT(*) FROM Oficinas WHERE OficinaId = ? AND Activo = 1", (oficina_id_ldap_int,))
+                if cursor.fetchone()[0] == 0:
+                    flash('Debe seleccionar una oficina válida para el usuario LDAP', 'danger')
+                    return redirect('/usuarios/crear')
+
+                # Completar email si viene vacío
+                email_final = email_ldap or f"{usuario_ldap}@qualitascolombia.com.co"
+
+                # Validaciones de longitud según esquema real de BD
+                maxlen_user = _get_column_maxlen(cursor, 'Usuarios', 'NombreUsuario')
+                if maxlen_user and len(usuario_ldap) > int(maxlen_user):
+                    flash(f'El usuario LDAP es demasiado largo (máx. {maxlen_user} caracteres)', 'danger')
+                    return redirect('/usuarios/crear')
+
+                maxlen_email = _get_column_maxlen(cursor, 'Usuarios', 'CorreoElectronico')
+                if email_final and maxlen_email and len(email_final) > int(maxlen_email):
+                    flash(f'El correo es demasiado largo (máx. {maxlen_email} caracteres)', 'danger')
+                    return redirect('/usuarios/crear')
+
+                maxlen_rol = _get_column_maxlen(cursor, 'Usuarios', 'Rol')
+                if rol_ldap and maxlen_rol and len(rol_ldap) > int(maxlen_rol):
+                    flash(f'El rol seleccionado es demasiado largo para la base de datos (máx. {maxlen_rol} caracteres).', 'danger')
+                    return redirect('/usuarios/crear')
                 
                
                 usuario_ldap_sanitizado = sanitizar_username(usuario_ldap)
@@ -340,9 +429,9 @@ def crear_usuario():
                 # Crear usuario LDAP manual
                 usuario_creado = UsuarioModel.crear_usuario_ldap_manual({
                     'usuario': usuario_ldap,
-                    'email': email_ldap or f"{usuario_ldap}@qualitascolombia.com.co",
+                    'email': email_final,
                     'rol': rol_ldap,
-                    'oficina_id': oficina_id_ldap or 1
+                    'oficina_id': oficina_id_ldap_int
                 })
                 
                 if usuario_creado:

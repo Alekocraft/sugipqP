@@ -86,6 +86,29 @@
         {% endif %}
 
 
+        {% if can_cobros %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-warning text-dark py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cash-register me-2"></i>Cobros POP
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-cash-register fa-3x text-warning"></i>
+                    </div>
+                    <h6 class="fw-semibold">Reporte de Cobros</h6>
+                    <p class="text-muted small mb-3">Cobro mensual por oficina (aprobados)</p>
+                    <a href="/reportes/cobros-pop" class="btn btn-warning btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
         {% if can_reportes or can_access('prestamos', 'view') or can_access('prestamos', 'view_own') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">

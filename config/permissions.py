@@ -149,16 +149,31 @@ APPROVER_LIKE_PERMS = {
         "novedades": ["create", "view", "manage", "approve", "reject", "return"],
     },
     "office_filter": "all",
+
 }
 
+<<<<<<< HEAD
 
 # Líder de inventario: igual a aprobador-like, pero con permisos de cobros POP (tesorería)
+=======
+# Líder de inventario: igual a aprobador pero con acceso al reporte de cobros POP
+>>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
 LIDER_INVENTARIO_PERMS = deepcopy(APPROVER_LIKE_PERMS)
 LIDER_INVENTARIO_PERMS.setdefault('actions', {}).setdefault('reportes', [])
 for _perm in ('cobros_view', 'cobros_cancel', 'cobros_export'):
     if _perm not in LIDER_INVENTARIO_PERMS['actions']['reportes']:
         LIDER_INVENTARIO_PERMS['actions']['reportes'].append(_perm)
 
+<<<<<<< HEAD
+=======
+
+
+# ✅ Permitir que líder de inventario cree y edite Material POP
+LIDER_INVENTARIO_PERMS.setdefault('actions', {}).setdefault('materiales', [])
+for _a in ('create', 'edit'):
+    if _a not in LIDER_INVENTARIO_PERMS['actions']['materiales']:
+        LIDER_INVENTARIO_PERMS['actions']['materiales'].append(_a)
+>>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
 # Tesorería: solo reportes
 TREASURY_PERMS = {
     "modules": ["dashboard", "reportes"],

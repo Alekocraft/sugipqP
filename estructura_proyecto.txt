@@ -1,20 +1,25 @@
 ESTRUCTURA DEL PROYECTO FLASK 
 ============================= 
+<<<<<<< HEAD
 Fecha: Fri 02/27/2026 11:24:41.01 
 Directorio actual: C:\Users\sinventarios\source\repos\sugipq_prue 
+=======
+Fecha: Mon 02/16/2026 14:15:51.89 
+Directorio actual: C:\Users\sinventarios\source\repos\sugipq_prod 
+>>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
  
 [ARCHIVOS PRINCIPALES .PY] 
 -------------------------- 
 app.py 
 certificado_route.py 
 database.py 
+notification_service.py 
 solicitudes.py 
 blueprints\api.py 
 blueprints\aprobacion.py 
 blueprints\aprobadores.py 
 blueprints\auth.py 
 blueprints\confirmacion_asignaciones.py 
-blueprints\helpers.py 
 blueprints\inventario_corporativo.py 
 blueprints\materiales.py 
 blueprints\novedades_model.py 
@@ -4039,7 +4044,6 @@ static\css\login.css
  
 [ARCHIVOS DE CONFIGURACION] 
 --------------------------- 
-requirements.txt 
 .env 
  
 [ARCHIVOS DE ENTORNO] 
@@ -4067,7 +4071,6 @@ logs\service.out.log
 [.vs] 
 [blueprints] 
 [config] 
-[env13] 
 [logs] 
 [models] 
 [services] 
@@ -4078,14 +4081,24 @@ logs\service.out.log
  
 Resumen: 
 --------- 
+<<<<<<< HEAD
 Archivos .py: 3968 
 Archivos HTML: 49 
+=======
+Archivos .py: 49 
+Archivos HTML: 47 
+>>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
 Archivos CSS: 5 
 Archivos JS: 0 
 Archivos de entorno: 2 
 Archivos de logs: 8 
+<<<<<<< HEAD
 Carpetas (sin entornos virtuales): 12 
+=======
+Carpetas (sin entornos virtuales): 11 
+>>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
  
 [ENTORNOS VIRTUALES EXCLUIDOS] 
 ------------------------------ 
+venv 
  

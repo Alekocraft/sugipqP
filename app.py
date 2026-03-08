@@ -11,6 +11,7 @@ from flask import (
 from utils.helpers import sanitizar_log_text
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 import uuid
 import json
 # ============================================================================
@@ -29,7 +30,7 @@ if sys.platform == "win32":
                 # Reemplazar emojis con texto seguro para Windows
                 replacements = {
                     'âœ…': '[OK]',
-                    'âš ï¸\x8f': '[WARN]',
+                    'âš ï¸\x8f': '[WARN]',
                     'âŒ': '[ERROR]',
                     'â„¹ï¸\x8f': '[INFO]',
                     'ðŸ"¦': '[INVENTARIO]',
@@ -63,6 +64,7 @@ else:
 # 2. CONFIGURAR LOGGING INICIAL (CORREGIDO PARA WINDOWS)
 # ============================================================================
 # Configurar logging primero
+os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -235,7 +237,17 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, 'static')
 )
 
-app.secret_key = os.environ.get('SECRET_KEY', os.urandom(32))
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+
+
+# Si estás detrás de un reverse proxy (IIS/ARR), esto ayuda a detectar HTTPS/host correctos
+
+secret_key = os.environ.get('SECRET_KEY')
+if os.environ.get('FLASK_ENV') == 'production' and not secret_key:
+    raise RuntimeError('SECRET_KEY es obligatorio en producción. Configúralo en el .env o variables del sistema.')
+app.secret_key = secret_key or os.urandom(32)
 app.config['JSON_AS_ASCII'] = False
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
@@ -247,7 +259,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 logger.info("Directorio de uploads configurado en: %s", sanitizar_log_text(os.path.abspath(UPLOAD_FOLDER)))
 
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
-app.config['SESSION_COOKIE_HTTPONLY'] = False # ajuste a true cuando este el link 
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 
@@ -707,7 +719,7 @@ def dashboard():
         materiales = MaterialModel.obtener_todos(oficina_id) or []
         oficinas = OficinaModel.obtener_todas() or []
         solicitudes = SolicitudModel.obtener_todas(oficina_id) or []
-        aprobadores = UsuarioModel.obtener_aprobadores() or []
+        aprobadores = UsuarioModel.obtener_aprobadores_desde_tabla() or []
         
         return render_template('dashboard.html',
             materiales=materiales,
@@ -733,6 +745,15 @@ def logout():
 def test_ldap():
     """Redirige a la ruta de test-ldap en auth"""
     return redirect('/auth/test-ldap')  
+
+@app.route('/auth/test-ldap', methods=['GET', 'POST'])
+def auth_test_ldap():
+    """Página de prueba de conexión LDAP (sin requerir autenticación).
+
+    Nota: Esta ruta existe para evitar 404 cuando se abre el template
+    templates/auth/test_ldap.html directamente desde el navegador.
+    """
+    return render_template('auth/test_ldap.html')
 
 # ============================================================================
 # 15. API DE ESTADO DE SESIÓN

@@ -539,6 +539,13 @@ class NotificationService:
             producto_nombre = producto_info.get("nombre", "Producto de inventario")
             producto_codigo = producto_info.get("codigo_unico", "N/A")
             producto_categoria = producto_info.get("categoria", "General")
+            producto_serial = (producto_info.get("serial") or "").strip()
+            producto_modelo = (producto_info.get("modelo") or "").strip()
+
+            detalle_modelo_html = '<tr><td style="padding:4px 0;"><b>Modelo:</b></td><td style="padding:4px 0;">%s</td></tr>' % producto_modelo if producto_modelo else ''
+            detalle_serial_html = '<tr><td style="padding:4px 0;"><b>Serial:</b></td><td style="padding:4px 0;">%s</td></tr>' % producto_serial if producto_serial else ''
+            detalle_modelo_texto = 'Modelo: %s\n' % producto_modelo if producto_modelo else ''
+            detalle_serial_texto = 'Serial: %s\n' % producto_serial if producto_serial else ''
 
             subject = "📦 Asignación de Inventario - %s" % producto_nombre
 
@@ -555,6 +562,8 @@ class NotificationService:
     <tr><td style="padding:4px 0;"><b>Producto:</b></td><td style="padding:4px 0;">%s</td></tr>
     <tr><td style="padding:4px 0;"><b>Código:</b></td><td style="padding:4px 0;">%s</td></tr>
     <tr><td style="padding:4px 0;"><b>Categoría:</b></td><td style="padding:4px 0;">%s</td></tr>
+    %s
+    %s
     <tr><td style="padding:4px 0;"><b>Cantidad:</b></td><td style="padding:4px 0;">%s unidad(es)</td></tr>
     <tr><td style="padding:4px 0;"><b>Oficina destino:</b></td><td style="padding:4px 0;">%s</td></tr>
     <tr><td style="padding:4px 0;"><b>Asignado por:</b></td><td style="padding:4px 0;">%s</td></tr>
@@ -583,6 +592,8 @@ class NotificationService:
                 producto_nombre,
                 producto_codigo,
                 producto_categoria,
+                detalle_modelo_html,
+                detalle_serial_html,
                 cantidad,
                 oficina_nombre,
                 asignador_nombre,
@@ -601,7 +612,7 @@ Estimado/a %s,
 Producto: %s
 Código: %s
 Categoría: %s
-Cantidad: %s unidad(es)
+%s%sCantidad: %s unidad(es)
 Oficina destino: %s
 Asignado por: %s
 Fecha: %s
@@ -617,6 +628,8 @@ Mensaje automático. No responder.
                 producto_nombre,
                 producto_codigo,
                 producto_categoria,
+                detalle_modelo_texto,
+                detalle_serial_texto,
                 cantidad,
                 oficina_nombre,
                 asignador_nombre,
@@ -656,6 +669,13 @@ Mensaje automático. No responder.
             producto_nombre = producto_info.get("nombre", "Producto de inventario")
             producto_codigo = producto_info.get("codigo_unico", "N/A")
             producto_categoria = producto_info.get("categoria", "General")
+            producto_serial = (producto_info.get("serial") or "").strip()
+            producto_modelo = (producto_info.get("modelo") or "").strip()
+
+            detalle_modelo_html = '<tr><td style="padding:4px 0;"><b>Modelo:</b></td><td style="padding:4px 0;">%s</td></tr>' % producto_modelo if producto_modelo else ''
+            detalle_serial_html = '<tr><td style="padding:4px 0;"><b>Serial:</b></td><td style="padding:4px 0;">%s</td></tr>' % producto_serial if producto_serial else ''
+            detalle_modelo_texto = 'Modelo: %s\n' % producto_modelo if producto_modelo else ''
+            detalle_serial_texto = 'Serial: %s\n' % producto_serial if producto_serial else ''
 
             subject = "📦 Asignación de Inventario - %s" % producto_nombre
 
@@ -669,6 +689,8 @@ Mensaje automático. No responder.
     <tr><td style="padding:4px 0;"><b>Producto:</b></td><td style="padding:4px 0;">%s</td></tr>
     <tr><td style="padding:4px 0;"><b>Código:</b></td><td style="padding:4px 0;">%s</td></tr>
     <tr><td style="padding:4px 0;"><b>Categoría:</b></td><td style="padding:4px 0;">%s</td></tr>
+    %s
+    %s
     <tr><td style="padding:4px 0;"><b>Cantidad:</b></td><td style="padding:4px 0;">%s unidad(es)</td></tr>
     <tr><td style="padding:4px 0;"><b>Oficina destino:</b></td><td style="padding:4px 0;">%s</td></tr>
     <tr><td style="padding:4px 0;"><b>Asignado por:</b></td><td style="padding:4px 0;">%s</td></tr>
@@ -682,6 +704,8 @@ Mensaje automático. No responder.
                 producto_nombre,
                 producto_codigo,
                 producto_categoria,
+                detalle_modelo_html,
+                detalle_serial_html,
                 cantidad,
                 oficina_nombre,
                 asignador_nombre,
@@ -696,7 +720,7 @@ Estimado/a %s,
 Producto: %s
 Código: %s
 Categoría: %s
-Cantidad: %s unidad(es)
+%s%sCantidad: %s unidad(es)
 Oficina destino: %s
 Asignado por: %s
 Fecha: %s
@@ -710,6 +734,8 @@ Mensaje automático. No responder.
                 producto_nombre,
                 producto_codigo,
                 producto_categoria,
+                detalle_modelo_texto,
+                detalle_serial_texto,
                 cantidad,
                 oficina_nombre,
                 asignador_nombre,

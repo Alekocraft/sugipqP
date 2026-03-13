@@ -122,6 +122,8 @@
                                 <th class="small">Código</th>
                                 <th class="small">Producto</th>
                                 <th class="small">Descripción</th>
+                                <th class="small">Modelo</th>
+                                <th class="small">Serial</th>
                                 <th class="small text-center">Cantidad</th>
                                 <th class="small text-end">Valor Unit.</th>
                                 <th class="small text-end">Valor Total</th>
@@ -133,6 +135,8 @@
                                 <td class="small">{{ material.codigo }}</td>
                                 <td class="small fw-bold">{{ material.nombre }}</td>
                                 <td class="small text-muted">{{ material.descripcion[:50] }}...</td>
+                                <td class="small">{{ material.modelo or "-" }}</td>
+                                <td class="small">{{ material.serial or "-" }}</td>
                                 <td class="text-center">
                                     <span class="badge bg-primary small">{{ material.cantidad }}</span>
                                 </td>
@@ -143,7 +147,7 @@
                         </tbody>
                         <tfoot>
                             <tr class="table-light">
-                                <td colspan="5" class="text-end fw-bold">TOTAL:</td>
+                                <td colspan="7" class="text-end fw-bold">TOTAL:</td>
                                 <td class="text-end fw-bold text-success">
                                     ${{ "%.2f"|format(oficina.valor_total) }}
                                 </td>

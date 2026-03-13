@@ -60,6 +60,8 @@ class InventarioCorporativoModel:
                     p.CantidadDisponible   AS cantidad,
                     p.CantidadMinima       AS cantidad_minima,
                     p.Ubicacion            AS ubicacion,
+                    p.Serial               AS serial,
+                    p.Modelo               AS modelo,
                     p.EsAsignable          AS es_asignable,
                     p.RutaImagen           AS ruta_imagen,
                     p.FechaCreacion        AS fecha_creacion,
@@ -101,6 +103,8 @@ class InventarioCorporativoModel:
                     p.CantidadDisponible   AS cantidad,
                     p.CantidadMinima       AS cantidad_minima,
                     p.Ubicacion            AS ubicacion,
+                    p.Serial               AS serial,
+                    p.Modelo               AS modelo,
                     p.EsAsignable          AS es_asignable,
                     p.RutaImagen           AS ruta_imagen,
                     p.FechaCreacion        AS fecha_creacion,
@@ -144,6 +148,8 @@ class InventarioCorporativoModel:
                     SUM(COALESCE(q.Cantidad, 1)) AS cantidad,
                     p.CantidadMinima       AS cantidad_minima,
                     p.Ubicacion            AS ubicacion,
+                    p.Serial               AS serial,
+                    p.Modelo               AS modelo,
                     p.EsAsignable          AS es_asignable,
                     p.RutaImagen           AS ruta_imagen,
                     p.FechaCreacion        AS fecha_creacion,
@@ -178,6 +184,8 @@ class InventarioCorporativoModel:
                     p.ValorUnitario,
                     p.CantidadMinima,
                     p.Ubicacion,
+                    p.Serial,
+                    p.Modelo,
                     p.EsAsignable,
                     p.RutaImagen,
                     p.FechaCreacion,
@@ -216,6 +224,8 @@ class InventarioCorporativoModel:
                     p.CantidadDisponible   AS cantidad,
                     p.CantidadMinima       AS cantidad_minima,
                     p.Ubicacion            AS ubicacion,
+                    p.Serial               AS serial,
+                    p.Modelo               AS modelo,
                     p.EsAsignable          AS es_asignable,
                     p.RutaImagen           AS ruta_imagen,
                     p.FechaCreacion        AS fecha_creacion,
@@ -242,7 +252,7 @@ class InventarioCorporativoModel:
     @staticmethod
     def crear(codigo_unico, nombre, descripcion, categoria_id, proveedor_id,
               valor_unitario, cantidad, cantidad_minima, ubicacion,
-              es_asignable, usuario_creador, ruta_imagen):
+              es_asignable, usuario_creador, ruta_imagen, serial=None, modelo=None):
         """
         Inserta y retorna ProductoId (SQL Server: OUTPUT INSERTED.ProductoId)
         """
@@ -256,14 +266,14 @@ class InventarioCorporativoModel:
                 INSERT INTO ProductosCorporativos
                     (CodigoUnico, NombreProducto, Descripcion, CategoriaId, ProveedorId,
                      ValorUnitario, CantidadDisponible, CantidadMinima, Ubicacion,
-                     EsAsignable, Activo, FechaCreacion, UsuarioCreador, RutaImagen)
+                     Serial, Modelo, EsAsignable, Activo, FechaCreacion, UsuarioCreador, RutaImagen)
                 OUTPUT INSERTED.ProductoId
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, GETDATE(), ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, GETDATE(), ?, ?)
             """
             cursor.execute(sql, (
                 codigo_unico, nombre, descripcion, int(categoria_id), int(proveedor_id),
                 float(valor_unitario), int(cantidad), int(cantidad_minima or 0),
-                ubicacion, int(es_asignable), usuario_creador, ruta_imagen
+                ubicacion, serial, modelo, int(es_asignable), usuario_creador, ruta_imagen
             ))
             new_id = cursor.fetchone()[0]
             conn.commit()
@@ -282,7 +292,7 @@ class InventarioCorporativoModel:
     @staticmethod
     def actualizar(producto_id, codigo_unico, nombre, descripcion, categoria_id,
                    proveedor_id, valor_unitario, cantidad, cantidad_minima,
-                   ubicacion, es_asignable, ruta_imagen=None):
+                   ubicacion, es_asignable, ruta_imagen=None, serial=None, modelo=None):
         """Actualizar producto incluyendo cantidad y ruta_imagen"""
         conn = get_database_connection()
         if not conn:
@@ -296,28 +306,28 @@ class InventarioCorporativoModel:
                     UPDATE ProductosCorporativos 
                     SET CodigoUnico = ?, NombreProducto = ?, Descripcion = ?, 
                         CategoriaId = ?, ProveedorId = ?, ValorUnitario = ?,
-                        CantidadDisponible = ?, CantidadMinima = ?, Ubicacion = ?, 
-                        EsAsignable = ?, RutaImagen = ?
+                        CantidadDisponible = ?, CantidadMinima = ?, Ubicacion = ?,
+                        Serial = ?, Modelo = ?, EsAsignable = ?, RutaImagen = ?
                     WHERE ProductoId = ? AND Activo = 1
                 """
                 params = (
                     codigo_unico, nombre, descripcion, int(categoria_id), int(proveedor_id),
                     float(valor_unitario), int(cantidad), int(cantidad_minima or 0),
-                    ubicacion, int(es_asignable), ruta_imagen, int(producto_id)
+                    ubicacion, serial, modelo, int(es_asignable), ruta_imagen, int(producto_id)
                 )
             else:
                 sql = """
                     UPDATE ProductosCorporativos 
                     SET CodigoUnico = ?, NombreProducto = ?, Descripcion = ?, 
                         CategoriaId = ?, ProveedorId = ?, ValorUnitario = ?,
-                        CantidadDisponible = ?, CantidadMinima = ?, Ubicacion = ?, 
-                        EsAsignable = ?
+                        CantidadDisponible = ?, CantidadMinima = ?, Ubicacion = ?,
+                        Serial = ?, Modelo = ?, EsAsignable = ?
                     WHERE ProductoId = ? AND Activo = 1
                 """
                 params = (
                     codigo_unico, nombre, descripcion, int(categoria_id), int(proveedor_id),
                     float(valor_unitario), int(cantidad), int(cantidad_minima or 0),
-                    ubicacion, int(es_asignable), int(producto_id)
+                    ubicacion, serial, modelo, int(es_asignable), int(producto_id)
                 )
 
             cursor.execute(sql, params)
@@ -445,7 +455,7 @@ class InventarioCorporativoModel:
 
     # ================== ASIGNACIONES / TRAZABILIDAD ==================
     @staticmethod
-    def asignar_a_oficina(producto_id, oficina_id, cantidad, usuario_accion):
+    def asignar_a_oficina(producto_id, oficina_id, cantidad, usuario_accion, serial_asignacion=None):
         """
         Resta stock de ProductosCorporativos.CantidadDisponible y crea registro
         en Asignaciones + guarda traza en AsignacionesCorporativasHistorial.
@@ -483,12 +493,22 @@ class InventarioCorporativoModel:
             if cant <= 0 or cant > stock:
                 return False
 
-            # 3. Descontar stock
-            cursor.execute("""
-                UPDATE ProductosCorporativos
-                SET CantidadDisponible = CantidadDisponible - ?
-                WHERE ProductoId = ?
-            """, (cant, int(producto_id)))
+            serial_asignacion = (_to_text(serial_asignacion)).strip() or None
+
+            # 3. Actualizar serial si la asignación lo informa y descontar stock
+            if serial_asignacion:
+                cursor.execute("""
+                    UPDATE ProductosCorporativos
+                    SET CantidadDisponible = CantidadDisponible - ?,
+                        Serial = ?
+                    WHERE ProductoId = ?
+                """, (cant, serial_asignacion, int(producto_id)))
+            else:
+                cursor.execute("""
+                    UPDATE ProductosCorporativos
+                    SET CantidadDisponible = CantidadDisponible - ?
+                    WHERE ProductoId = ?
+                """, (cant, int(producto_id)))
 
             # 4. Crear registro en tabla Asignaciones (CON USUARIO VÁLIDO)
             cursor.execute("""
@@ -826,6 +846,8 @@ class InventarioCorporativoModel:
                     p.CantidadDisponible   AS cantidad,
                     p.CantidadMinima       AS cantidad_minima,
                     p.Ubicacion            AS ubicacion,
+                    p.Serial               AS serial,
+                    p.Modelo               AS modelo,
                     p.EsAsignable          AS es_asignable,
                     p.RutaImagen           AS ruta_imagen,
                     p.FechaCreacion        AS fecha_creacion,
@@ -871,6 +893,8 @@ class InventarioCorporativoModel:
                     p.CantidadDisponible   AS cantidad,
                     p.CantidadMinima       AS cantidad_minima,
                     p.Ubicacion            AS ubicacion,
+                    p.Serial               AS serial,
+                    p.Modelo               AS modelo,
                     p.EsAsignable          AS es_asignable,
                     p.RutaImagen           AS ruta_imagen,
                     p.FechaCreacion        AS fecha_creacion,
@@ -914,6 +938,8 @@ class InventarioCorporativoModel:
                     p.NombreProducto               AS nombre_producto,
                     p.Descripcion                  AS descripcion,
                     c.NombreCategoria              AS categoria,
+                    p.Serial                       AS serial,
+                    p.Modelo                       AS modelo,
                     o.NombreOficina                AS oficina,
                     a.UsuarioADNombre              AS usuario_ad_nombre,
                     a.UsuarioADEmail               AS usuario_ad_email,
@@ -969,6 +995,8 @@ class InventarioCorporativoModel:
                     p.NombreProducto               AS nombre_producto,
                     p.Descripcion                  AS descripcion,
                     c.NombreCategoria              AS categoria,
+                    p.Serial                       AS serial,
+                    p.Modelo                       AS modelo,
                     a.OficinaId                    AS oficina_id,
                     o.NombreOficina                AS oficina,
                     a.UsuarioAsignadoId            AS usuario_asignado_id,

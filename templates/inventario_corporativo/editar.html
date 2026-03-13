@@ -96,6 +96,26 @@
                                 </div>
                             </div>
 
+                            <div class="row d-none" id="bloque-datos-tecnologia">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="modelo" class="form-label">Modelo <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="modelo" name="modelo"
+                                               value="{{ producto.modelo or '' }}" maxlength="150">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Serial actual</label>
+                                        <input type="text" class="form-control" value="{{ producto.serial or '' }}" readonly>
+                                        <div class="form-text">El serial de Tecnología se registra o actualiza desde la asignación del producto.</div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-text mb-3">Para la categoría Tecnología, aquí solo se exige el modelo.</div>
+                                </div>
+                            </div>
+
                             <!-- Cantidad y Valor -->
                             <div class="row">
                                 <div class="col-md-4">
@@ -208,5 +228,40 @@
             }
         });
     </script>
+
+<script>
+(function () {
+    const categoriaSelect = document.getElementById('categoria_id');
+    const bloque = document.getElementById('bloque-datos-tecnologia');
+    const modeloInput = document.getElementById('modelo');
+
+    function normalizarTexto(valor) {
+        return (valor || '')
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function categoriaRequiereDatos() {
+        if (!categoriaSelect) return false;
+        const option = categoriaSelect.options[categoriaSelect.selectedIndex];
+        const nombre = option ? option.text : '';
+        return normalizarTexto(nombre) === 'tecnologia';
+    }
+
+    function actualizarBloqueTecnologia() {
+        const requerido = categoriaRequiereDatos();
+        bloque.classList.toggle('d-none', !requerido);
+        if (modeloInput) modeloInput.required = requerido;
+    }
+
+    if (categoriaSelect) {
+        categoriaSelect.addEventListener('change', actualizarBloqueTecnologia);
+        actualizarBloqueTecnologia();
+    }
+})();
+</script>
+
 </body>
 </html>

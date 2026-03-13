@@ -159,7 +159,6 @@ class CobroPOPMensualModel:
                 conn.close()
             except Exception:
                 pass
-<<<<<<< HEAD
 
 
 from decimal import Decimal, ROUND_HALF_UP
@@ -538,5 +537,3 @@ class CobroPOPDiferidoSolicitudModel:
                 conn.close()
             except Exception:
                 pass
-=======
->>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e

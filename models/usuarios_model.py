@@ -71,6 +71,28 @@ class UsuarioModel:
                                     # Obtener información del usuario
                                     usuario_info = UsuarioModel._obtener_info_usuario(usuario)
                                     if usuario_info:
+                                        # Priorizar nombre visible desde AD (displayName) para sesión/solicitudes
+                                        try:
+                                            full_name = (ad_user.get('full_name') or '').strip()
+                                            if full_name:
+                                                usuario_info['nombre'] = full_name
+                                                usuario_info['full_name'] = full_name
+                                            email = (ad_user.get('email') or '').strip()
+                                            if email:
+                                                usuario_info['email'] = email
+                                                # Actualizar correo real en BD (sin enmascarar)
+                                                try:
+                                                    conn2 = get_database_connection()
+                                                    if conn2:
+                                                        cur2 = conn2.cursor()
+                                                        cur2.execute("UPDATE Usuarios SET CorreoElectronico = ? WHERE UsuarioId = ?", (email, usuario_info['id']))
+                                                        conn2.commit()
+                                                        cur2.close()
+                                                        conn2.close()
+                                                except Exception:
+                                                    pass
+                                        except Exception:
+                                            pass
                                         return usuario_info
                                     else:
                                         # Si no se puede obtener info, crear sesión básica
@@ -151,7 +173,7 @@ class UsuarioModel:
                 usuario_info = {
                     'id': row[0],
                     'usuario': row[1],
-                    'nombre': row[2] if row[2] else row[1],
+                    'nombre': row[1] if row[1] else (row[2] if row[2] else ''),
                     'rol': row[3],
                     'oficina_id': row[4],
                     'oficina_nombre': row[5] if row[5] else '',
@@ -207,7 +229,7 @@ class UsuarioModel:
             return {
                 'id': row[0],
                 'usuario': row[1],
-                'nombre': row[2] if row[2] else row[1],
+                'nombre': row[1] if row[1] else (row[2] if row[2] else ''),
                 'rol': row[3],
                 'oficina_id': row[4],
                 'oficina_nombre': row[5] if row[5] else '',
@@ -378,7 +400,7 @@ class UsuarioModel:
                 usuario_info = {
                     'id': existing[0],
                     'usuario': existing[1],
-                    'nombre': existing[2] if existing[2] else existing[1],
+                    'nombre': existing[1] if existing[1] else (existing[2] if existing[2] else ''),
                     'rol': existing[3],
                     'oficina_id': existing[4],
                     'oficina_nombre': ''
@@ -424,7 +446,7 @@ class UsuarioModel:
                     ) VALUES (?, ?, ?, ?, 1, GETDATE(), 'LDAP_USER', 1)
                 """, (
                     ad_user['username'],
-                    sanitizar_email(ad_user.get('email', f"{ad_user['username']}@qualitascolombia.com.co")),  # ✅ CORRECCIÓN
+                    (ad_user.get('email') or f"{ad_user['username']}@qualitascolombia.com.co"),  # ✅ CORRECCIÓN
                     default_rol,
                     oficina_id
                 ))
@@ -722,7 +744,7 @@ class UsuarioModel:
                 return {
                     'id': row[0],
                     'usuario': row[1],
-                    'nombre': row[2] if row[2] else row[1],
+                    'nombre': row[1] if row[1] else (row[2] if row[2] else ''),
                     'rol': row[3],
                     'oficina_id': row[4],
                     'oficina_nombre': row[5] if row[5] else ''
@@ -768,7 +790,7 @@ class UsuarioModel:
                 usuarios.append({
                     'id': row[0],
                     'usuario': row[1],
-                    'nombre': row[2] if row[2] else row[1],
+                    'nombre': row[1] if row[1] else (row[2] if row[2] else ''),
                     'rol': row[3],
                     'oficina_id': row[4],
                     'oficina_nombre': row[5] if row[5] else '',
@@ -890,7 +912,7 @@ class UsuarioModel:
                 ) VALUES (?, ?, ?, ?, 'LDAP_PENDING', 1, GETDATE(), 1)
             """, (
                 usuario_data['usuario'],
-                sanitizar_email(usuario_data.get('email', f"{usuario_data['usuario']}@qualitascolombia.com.co")),  # ✅ CORRECCIÓN
+                (usuario_data.get('email') or f"{usuario_data['usuario']}@qualitascolombia.com.co"),  # ✅ CORRECCIÓN
                 usuario_data.get('rol', 'usuario'),
                 usuario_data.get('oficina_id', 1)
             ))
@@ -949,7 +971,7 @@ class UsuarioModel:
                     FechaActualizacion = GETDATE()
                 WHERE NombreUsuario = ? AND ContraseñaHash = 'LDAP_PENDING'
             """, (
-                sanitizar_email(ad_user_info.get('email', f"{username}@qualitascolombia.com.co")),  # ✅ CORRECCIÓN
+                (ad_user_info.get('email') or f"{username}@qualitascolombia.com.co"),  # ✅ CORRECCIÓN
                 username
             ))
             
@@ -962,7 +984,7 @@ class UsuarioModel:
                         FechaActualizacion = GETDATE()
                     WHERE NombreUsuario = ?
                 """, (
-                    sanitizar_email(ad_user_info.get('email', f"{username}@qualitascolombia.com.co")),  # ✅ CORRECCIÓN
+                    (ad_user_info.get('email') or f"{username}@qualitascolombia.com.co"),  # ✅ CORRECCIÓN
                     username
                 ))
             

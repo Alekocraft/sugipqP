@@ -288,6 +288,41 @@ def _obtener_info_solicitud_completa(solicitud_id):
         cursor.close()
         conn.close()
 
+def _resolver_solicitante_para_guardar() -> str:
+    """Devuelve un valor NO enmascarado para guardar en SolicitudesMaterial.UsuarioSolicitante.
+
+    Reglas:
+    - Preferir nombre visible (displayName) de AD cuando LDAP está disponible.
+    - Si no se puede, usar username (session['usuario']).
+    - Nunca guardar correos enmascarados con '***'.
+    """
+    nombre = (session.get('usuario_nombre') or '').strip()
+    usuario = (session.get('usuario') or '').strip()
+
+    # Si viene enmascarado o parece correo, intentar resolver desde AD (service bind)
+    if usuario and (('***' in nombre) or ('@' in nombre) or not nombre):
+        try:
+            from utils.ldap_auth import ad_auth
+            details = ad_auth.get_user_details(usuario) or {}
+            display = (details.get('full_name') or details.get('nombre') or '').strip()
+            if display:
+                nombre = display
+            else:
+                # Si no hay displayName, al menos usar el username
+                if not nombre:
+                    nombre = usuario
+        except Exception:
+            if not nombre:
+                nombre = usuario
+
+    # Último cinturón: nunca guardar algo con ***
+    if '***' in nombre:
+        nombre = usuario or nombre.replace('***', '')
+
+    # Limitar a 100 para no romper el SP (@Usuario VARCHAR(100))
+    return (nombre or usuario or '').strip()[:100]
+
+
 # ============================================================================
 # RUTAS PRINCIPALES
 # ============================================================================
@@ -378,7 +413,7 @@ def crear():
             
             usuario_id = session.get('usuario_id')
             oficina_id = session.get('oficina_id')
-            usuario_nombre = (session.get('usuario_nombre') or session.get('usuario') or '').strip()
+            usuario_nombre = _resolver_solicitante_para_guardar()
             
             if not oficina_id:
                 flash('No se pudo determinar su oficina', 'danger')

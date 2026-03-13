@@ -1,12 +1,7 @@
 ESTRUCTURA DEL PROYECTO FLASK 
 ============================= 
-<<<<<<< HEAD
-Fecha: Fri 02/27/2026 11:24:41.01 
+Fecha: Tue 03/10/2026  9:43:04.67 
 Directorio actual: C:\Users\sinventarios\source\repos\sugipq_prue 
-=======
-Fecha: Mon 02/16/2026 14:15:51.89 
-Directorio actual: C:\Users\sinventarios\source\repos\sugipq_prod 
->>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
  
 [ARCHIVOS PRINCIPALES .PY] 
 -------------------------- 
@@ -14,12 +9,14 @@ app.py
 certificado_route.py 
 database.py 
 notification_service.py 
+seguridadtest.py 
 solicitudes.py 
 blueprints\api.py 
 blueprints\aprobacion.py 
 blueprints\aprobadores.py 
 blueprints\auth.py 
 blueprints\confirmacion_asignaciones.py 
+blueprints\helpers.py 
 blueprints\inventario_corporativo.py 
 blueprints\materiales.py 
 blueprints\novedades_model.py 
@@ -4042,6 +4039,18 @@ static\css\login.css
 [ARCHIVOS JS en /static/] 
 ------------------------- 
  
+[ARCHIVOS DE IMAGEN en /static/] 
+-------------------------------- 
+static\favicon.ico 
+static\images\qualitas_logo.png 
+static\uploads\20260227143359_Publidad__2_1.png 
+static\uploads\20260227150316_Publidad__1_1.png 
+static\uploads\20260227152741_Mugs.png 
+static\uploads\20260227155610_ChatGPT_Image_27_feb_2026_03_35_18_p.m..png 
+static\uploads\20260227155610_ChatGPT_Image_27_feb_2026_03_35_21_p.m..png 
+static\uploads\20260227155610_ChatGPT_Image_27_feb_2026_03_38_27_p.m..png 
+static\uploads\elementos\qualitasIma.png 
+ 
 [ARCHIVOS DE CONFIGURACION] 
 --------------------------- 
 .env 
@@ -4055,12 +4064,8 @@ static\css\login.css
 ------------------ 
 logs\app.log 
 logs\ldap.log 
-logs\service.err.log 
-logs\service.out.log 
 logs\app.log 
 logs\ldap.log 
-logs\service.err.log 
-logs\service.out.log 
  
 [ARCHIVOS LOG EN RAIZ] 
 ---------------------- 
@@ -4081,24 +4086,16 @@ logs\service.out.log
  
 Resumen: 
 --------- 
-<<<<<<< HEAD
-Archivos .py: 3968 
+Archivos .py: 3970 
 Archivos HTML: 49 
-=======
-Archivos .py: 49 
-Archivos HTML: 47 
->>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
 Archivos CSS: 5 
 Archivos JS: 0 
+Archivos de imagen (ico, png): 9 
 Archivos de entorno: 2 
-Archivos de logs: 8 
-<<<<<<< HEAD
-Carpetas (sin entornos virtuales): 12 
-=======
+Archivos de logs: 4 
 Carpetas (sin entornos virtuales): 11 
->>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
  
 [ENTORNOS VIRTUALES EXCLUIDOS] 
 ------------------------------ 
-venv 
+env13 
  

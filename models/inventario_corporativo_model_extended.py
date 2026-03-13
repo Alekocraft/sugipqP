@@ -27,7 +27,7 @@ class InventarioCorporativoModelExtended:
     """
     
     @staticmethod
-    def asignar_a_usuario_ad(producto_id, oficina_id, cantidad, usuario_ad_info, usuario_accion):
+    def asignar_a_usuario_ad(producto_id, oficina_id, cantidad, usuario_ad_info, usuario_accion, serial_asignacion=None):
         """
         Asigna un producto a un usuario especÃ­fico del Active Directory.
         
@@ -81,12 +81,22 @@ class InventarioCorporativoModelExtended:
             if not usuario_asignado_id:
                 return {'success': False, 'message': 'Error al procesar el usuario asignado'}
             
-            # 3. Descontar stock
-            cursor.execute("""
-                UPDATE ProductosCorporativos
-                SET CantidadDisponible = CantidadDisponible - ?
-                WHERE ProductoId = ?
-            """, (cant, int(producto_id)))
+            serial_asignacion = ((serial_asignacion or '')).strip() or None
+
+            # 3. Actualizar serial si llega informado y descontar stock
+            if serial_asignacion:
+                cursor.execute("""
+                    UPDATE ProductosCorporativos
+                    SET CantidadDisponible = CantidadDisponible - ?,
+                        Serial = ?
+                    WHERE ProductoId = ?
+                """, (cant, serial_asignacion, int(producto_id)))
+            else:
+                cursor.execute("""
+                    UPDATE ProductosCorporativos
+                    SET CantidadDisponible = CantidadDisponible - ?
+                    WHERE ProductoId = ?
+                """, (cant, int(producto_id)))
             
             # 4. Crear registro en tabla Asignaciones con usuario AD
             cursor.execute("""
@@ -141,7 +151,7 @@ class InventarioCorporativoModelExtended:
     
     @staticmethod
     def asignar_a_usuario_ad_con_confirmacion(producto_id, oficina_id, cantidad, 
-                                               usuario_ad_info, usuario_accion):
+                                               usuario_ad_info, usuario_accion, serial_asignacion=None):
         """
         Asigna un producto a un usuario del Active Directory y genera token de confirmaciÃ³n.
         
@@ -195,12 +205,22 @@ class InventarioCorporativoModelExtended:
             if not usuario_asignado_id:
                 return {'success': False, 'message': 'Error al procesar el usuario asignado'}
             
-            # 3. Descontar stock
-            cursor.execute("""
-                UPDATE ProductosCorporativos
-                SET CantidadDisponible = CantidadDisponible - ?
-                WHERE ProductoId = ?
-            """, (cant, int(producto_id)))
+            serial_asignacion = ((serial_asignacion or '')).strip() or None
+
+            # 3. Actualizar serial si llega informado y descontar stock
+            if serial_asignacion:
+                cursor.execute("""
+                    UPDATE ProductosCorporativos
+                    SET CantidadDisponible = CantidadDisponible - ?,
+                        Serial = ?
+                    WHERE ProductoId = ?
+                """, (cant, serial_asignacion, int(producto_id)))
+            else:
+                cursor.execute("""
+                    UPDATE ProductosCorporativos
+                    SET CantidadDisponible = CantidadDisponible - ?
+                    WHERE ProductoId = ?
+                """, (cant, int(producto_id)))
             
             # 4. Crear registro en tabla Asignaciones con usuario AD
             cursor.execute("""

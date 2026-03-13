@@ -79,7 +79,13 @@ ADMIN_PERMS = {
             "return",
             "manage_materials",
         ],
-        "reportes": ["view_all", "view_own", "cobros_view", "cobros_cancel", "cobros_export"],
+        "reportes": [
+            "view_all",
+            "view_own",
+            "cobros_view",
+            "cobros_cancel",
+            "cobros_export",
+        ],
         "inventario_corporativo": [
             "view",
             "create",
@@ -102,8 +108,7 @@ ADMIN_PERMS = {
     "office_filter": "all",
 }
 
-# Aprobador y Líder de inventario: aprobar solicitudes de todos los módulos,
-# EXCEPTO gestión de usuarios. (pueden ver todo por oficina=all)
+# Aprobador: puede ver reportes globales
 APPROVER_LIKE_PERMS = {
     "modules": [
         "dashboard",
@@ -149,40 +154,30 @@ APPROVER_LIKE_PERMS = {
         "novedades": ["create", "view", "manage", "approve", "reject", "return"],
     },
     "office_filter": "all",
-
 }
 
-<<<<<<< HEAD
-
-# Líder de inventario: igual a aprobador-like, pero con permisos de cobros POP (tesorería)
-=======
-# Líder de inventario: igual a aprobador pero con acceso al reporte de cobros POP
->>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
+# Líder de inventario: mismo acceso global a reportes + cobros POP + create/edit Material POP
 LIDER_INVENTARIO_PERMS = deepcopy(APPROVER_LIKE_PERMS)
-LIDER_INVENTARIO_PERMS.setdefault('actions', {}).setdefault('reportes', [])
-for _perm in ('cobros_view', 'cobros_cancel', 'cobros_export'):
-    if _perm not in LIDER_INVENTARIO_PERMS['actions']['reportes']:
-        LIDER_INVENTARIO_PERMS['actions']['reportes'].append(_perm)
+LIDER_INVENTARIO_PERMS.setdefault("actions", {}).setdefault("reportes", [])
+for _perm in ("cobros_view", "cobros_cancel", "cobros_export"):
+    if _perm not in LIDER_INVENTARIO_PERMS["actions"]["reportes"]:
+        LIDER_INVENTARIO_PERMS["actions"]["reportes"].append(_perm)
 
-<<<<<<< HEAD
-=======
+LIDER_INVENTARIO_PERMS.setdefault("actions", {}).setdefault("materiales", [])
+for _perm in ("create", "edit"):
+    if _perm not in LIDER_INVENTARIO_PERMS["actions"]["materiales"]:
+        LIDER_INVENTARIO_PERMS["actions"]["materiales"].append(_perm)
 
-
-# ✅ Permitir que líder de inventario cree y edite Material POP
-LIDER_INVENTARIO_PERMS.setdefault('actions', {}).setdefault('materiales', [])
-for _a in ('create', 'edit'):
-    if _a not in LIDER_INVENTARIO_PERMS['actions']['materiales']:
-        LIDER_INVENTARIO_PERMS['actions']['materiales'].append(_a)
->>>>>>> 91ce8b42868ef3d49fe542f90b205d8d93e4f57e
-# Tesorería: solo reportes
+# Tesorería: reportes, pero sin acceso global especial al reporte de asignaciones-persona
 TREASURY_PERMS = {
     "modules": ["dashboard", "reportes"],
-    "actions": {"reportes": ["view_all", "cobros_view", "cobros_cancel", "cobros_export"]},
+    "actions": {
+        "reportes": ["view_own", "cobros_view", "cobros_cancel", "cobros_export"]
+    },
     "office_filter": "all",
 }
 
-# Oficinas: modales separados (material pop, inventario corporativo, préstamos),
-# y solo ven lo propio (office_filter específico)
+# Oficinas: solo ven lo suyo
 OFFICE_BASE_PERMS = {
     "modules": [
         "dashboard",
@@ -196,16 +191,13 @@ OFFICE_BASE_PERMS = {
         "aprobadores",
     ],
     "actions": {
-        # Material POP
         "materiales": [],
         "solicitudes": ["view", "create", "return"],
         "novedades": ["create", "view", "return"],
         "reportes": ["view_own"],
         "oficinas": ["view"],
         "aprobadores": ["view"],
-        # Préstamos
         "prestamos": ["view_own", "create"],
-        # Inventario corporativo (oficinas: ver lo suyo / solicitudes de traslados-devoluciones)
         "inventario_corporativo": [
             "view",
             "return",
@@ -251,7 +243,7 @@ OFFICE_FILTERS = {
     "oficina_usaquen": "USAQUEN",
 }
 
-# Roles corporativos con comportamiento "office-like" (misma lógica/permisos que oficina_coq)
+# Roles corporativos con comportamiento office-like
 OFFICE_LIKE_ROLES = {
     "gerencia_talento_humano": "COQ",
     "gerencia_comercial": "COQ",

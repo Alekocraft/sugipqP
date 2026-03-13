@@ -36,14 +36,16 @@
                     <div class="mb-2"><strong>Descripción:</strong> {{ producto.descripcion }}</div>
                     {% endif %}
                     <div class="mb-2"><strong>Categoría:</strong> {{ producto.categoria }}</div>
-                    <div class="mb-2"><strong>Marca / Modelo:</strong> {{ producto.marca }} {{ producto.modelo }}</div>
-                    {% if producto.serial_number %}
-                    <div class="mb-2"><strong>Serial:</strong> {{ producto.serial_number }}</div>
+                    {% if producto.modelo %}
+                    <div class="mb-2"><strong>Modelo:</strong> {{ producto.modelo }}</div>
+                    {% endif %}
+                    {% if producto.serial %}
+                    <div class="mb-2"><strong>Serial:</strong> {{ producto.serial }}</div>
                     {% endif %}
                     <hr>
                     <div class="d-flex justify-content-between">
-                        <span><strong>Total:</strong> {{ producto.cantidad_total }}</span>
-                        <span><strong>Disponible:</strong> {{ producto.cantidad_disponible }}</span>
+                        <span><strong>Disponible:</strong> {{ producto.cantidad or 0 }}</span>
+                        <span><strong>Asignable:</strong> {{ 'Sí' if producto.es_asignable else 'No' }}</span>
                     </div>
                 </div>
             </div>
@@ -70,22 +72,19 @@
                                     {% for h in historial %}
                                     <tr>
                                         <td>
-                                            {{ h.fecha_asignacion.strftime('%Y-%m-%d') if h.fecha_asignacion else '-' }}
+                                            {{ (h.Fecha.strftime('%Y-%m-%d') if h.Fecha else '-') if h else '-' }}
                                         </td>
                                         <td>
-                                            {{ h.nombre_oficina }}
-                                            {% if h.ubicacion_oficina %}
-                                                <div class="text-muted small">{{ h.ubicacion_oficina }}</div>
-                                            {% endif %}
+                                            {{ h.oficina or '-' }}
                                         </td>
                                         <td>
-                                            {{ h.usuario_asignado or '-' }}
-                                            {% if h.usuario_email %}
-                                                <div class="text-muted small">{{ h.usuario_email }}</div>
+                                            {{ h.UsuarioAsignadoNombre or h.UsuarioAccion or '-' }}
+                                            {% if h.UsuarioAsignadoEmail %}
+                                                <div class="text-muted small">{{ h.UsuarioAsignadoEmail }}</div>
                                             {% endif %}
                                         </td>
-                                        <td>{{ h.cantidad }}</td>
-                                        <td>{{ h.estado }}</td>
+                                        <td>{{ h.Cantidad or h.cantidad or 0 }}</td>
+                                        <td>{{ h.Accion or h.estado or "-" }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -118,10 +117,25 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">Cantidad</label>
-                                <input type="number" class="form-control" name="cantidad" min="1" max="{{ producto.cantidad_disponible }}" value="1" required>
-                                <div class="form-text">Máx: {{ producto.cantidad_disponible }}</div>
+                                <input type="number" class="form-control" name="cantidad" min="1" max="{{ producto.cantidad or 0 }}" value="1" required>
+                                <div class="form-text">Máx: {{ producto.cantidad or 0 }}</div>
                             </div>
                         </div>
+
+
+                        {% if requiere_serial_asignacion %}
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-8">
+                                <label class="form-label">Serial <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="serial_asignacion" name="serial_asignacion" maxlength="150" required>
+                                <div class="form-text">Para productos de Tecnología, el serial es obligatorio al asignar.</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" value="{{ producto.modelo or '' }}" readonly>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <hr class="my-4">
 
@@ -186,7 +200,7 @@
             <!-- Ayuda -->
             <div class="alert alert-info mt-4 mb-0">
                 <i class="fas fa-info-circle"></i>
-                <strong>Tip:</strong> Si el AD no está disponible, puedes escribir el nombre y correo manualmente.
+                <strong>Tip:</strong> Si el AD no está disponible, puedes escribir el nombre y correo manualmente.{% if requiere_serial_asignacion %} Para Tecnología, recuerda registrar el serial antes de guardar la asignación.{% endif %}
             </div>
         </div>
     </div>

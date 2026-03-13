@@ -68,6 +68,13 @@
                                 <strong><i class="fas fa-map-marker-alt me-2"></i>Ubicación:</strong>
                                 <p class="mt-1">{{ producto.ubicacion or 'No especificada' }}</p>
                             </div>
+
+                            {% if producto.modelo %}
+                            <div class="mb-3">
+                                <strong><i class="fas fa-laptop me-2"></i>Modelo:</strong>
+                                <p class="mt-1">{{ producto.modelo }}</p>
+                            </div>
+                            {% endif %}
                             
                             <div class="mb-3">
                                 <strong><i class="fas fa-share-square me-2"></i>Asignable:</strong>

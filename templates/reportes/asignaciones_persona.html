@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}Asignaciones por Persona{% endblock %}
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1" style="color: #A73493;">
+                <i class="fas fa-user-check me-2"></i>Asignaciones por Persona
+            </h1>
+            <p class="text-muted small mb-0">
+                {% if puede_ver_todo %}
+                Reporte global de activos asignados por colaborador
+                {% else %}
+                Consulta de los activos que tiene asignados el usuario autenticado
+                {% endif %}
+            </p>
+        </div>
+        <a href="/reportes" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Volver a Reportes
+        </a>
+    </div>
+
+    <div class="alert mb-4" style="background-color: #F7F2F6; border: 1px solid #D9D9D9; color: #4A4A4A;">
+        <i class="fas fa-info-circle me-1" style="color: #0098B1;"></i>
+        {% if puede_ver_todo %}
+        Acceso global habilitado para <strong>administrador</strong>, <strong>líder de inventario</strong> y <strong>aprobador</strong>.
+        {% else %}
+        Este reporte está restringido: solo se muestran las asignaciones cargadas a <strong>{{ session.usuario_nombre }}</strong>.
+        {% endif %}
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 resumen-card">
+                <div class="card-body text-center">
+                    <h3 class="fw-bold mb-0" style="color: #A73493;">{{ total_asignaciones }}</h3>
+                    <small class="text-muted">Total asignaciones</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 resumen-card">
+                <div class="card-body text-center">
+                    <h3 class="fw-bold mb-0" style="color: #0098B1;">{{ total_cantidad }}</h3>
+                    <small class="text-muted">Cantidad total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 resumen-card">
+                <div class="card-body text-center">
+                    <h3 class="fw-bold mb-0" style="color: #4A4A4A;">${{ '{:,.2f}'.format(valor_total_asignado or 0) }}</h3>
+                    <small class="text-muted">Valor total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 resumen-card">
+                <div class="card-body text-center">
+                    <h3 class="fw-bold mb-0 text-success">{{ total_confirmadas }}</h3>
+                    <small class="text-muted">Confirmadas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 resumen-card">
+                <div class="card-body text-center">
+                    <h3 class="fw-bold mb-0 text-warning">{{ total_pendientes }}</h3>
+                    <small class="text-muted">Pendientes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 resumen-card">
+                <div class="card-body text-center">
+                    <h3 class="fw-bold mb-0 text-secondary">{{ total_devueltas }}</h3>
+                    <small class="text-muted">Devueltas</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header py-3" style="background-color: #D9D9D9;">
+            <h6 class="mb-0 fw-semibold" style="color: #4A4A4A;"><i class="fas fa-filter me-1"></i>Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" action="/reportes/asignaciones-persona" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" name="nombre" class="form-control" value="{{ filtros.nombre }}" {% if not puede_ver_todo %}disabled{% endif %}>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Correo</label>
+                    <input type="text" name="correo" class="form-control" value="{{ filtros.correo }}" {% if not puede_ver_todo %}disabled{% endif %}>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Oficina</label>
+                    <select name="oficina_id" class="form-select" {% if not puede_ver_todo %}disabled{% endif %}>
+                        <option value="">Todas</option>
+                        {% for oficina in oficinas %}
+                        <option value="{{ oficina.id or oficina.oficina_id }}" {% if filtros.oficina_id|string == (oficina.id or oficina.oficina_id)|string %}selected{% endif %}>{{ oficina.nombre or oficina.nombre_oficina }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select" {% if not puede_ver_todo %}disabled{% endif %}>
+                        <option value="">Todos</option>
+                        <option value="ASIGNADO" {% if filtros.estado == 'ASIGNADO' %}selected{% endif %}>ASIGNADO</option>
+                        <option value="CONFIRMADO" {% if filtros.estado == 'CONFIRMADO' %}selected{% endif %}>CONFIRMADO</option>
+                        <option value="DEVUELTO" {% if filtros.estado == 'DEVUELTO' %}selected{% endif %}>DEVUELTO</option>
+                    </select>
+                </div>
+                <div class="col-12 d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-sm" style="background-color: #0098B1; color: white;" {% if not puede_ver_todo %}disabled{% endif %}>
+                        <i class="fas fa-search me-1"></i>Aplicar filtros
+                    </button>
+                    <a href="/reportes/asignaciones-persona" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-eraser me-1"></i>Limpiar
+                    </a>
+                    <a href="/reportes/asignaciones-persona/exportar/pdf?nombre={{ filtros.nombre|urlencode }}&correo={{ filtros.correo|urlencode }}&oficina_id={{ filtros.oficina_id|urlencode }}&estado={{ filtros.estado|urlencode }}" class="btn btn-sm ms-auto" style="background-color: #A73493; color: white;">
+                        <i class="fas fa-file-pdf me-1"></i>Exportar PDF
+                    </a>
+                    <a href="/reportes/asignaciones-persona/exportar/excel?nombre={{ filtros.nombre|urlencode }}&correo={{ filtros.correo|urlencode }}&oficina_id={{ filtros.oficina_id|urlencode }}&estado={{ filtros.estado|urlencode }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-file-excel me-1"></i>Exportar Excel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header text-white py-3" style="background-color: #0098B1;">
+            <h6 class="mb-0 fw-semibold"><i class="fas fa-list me-1"></i>Resultado <span class="badge bg-light text-dark ms-2">{{ asignaciones|length }}</span></h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 650px; overflow:auto;">
+                <table class="table table-hover table-sm align-middle mb-0 tabla-asignaciones">
+                    <thead class="sticky-top" style="background-color: #F6F6F6;">
+                        <tr>
+                            <th class="col-persona">Persona</th>
+                            <th class="col-correo">Correo</th>
+                            <th class="col-oficina">Oficina</th>
+                            <th class="col-producto">Producto</th>
+                            <th class="col-codigo text-center">Código</th>
+                            <th class="col-categoria">Categoría</th>
+                            <th class="col-modelo">Modelo</th>
+                            <th class="col-serial">Serial</th>
+                            <th class="col-cantidad text-center">Cantidad</th>
+                            <th class="col-valor text-end">Valor Unitario</th>
+                            <th class="col-valor text-end">Valor Total</th>
+                            <th class="col-fecha">Fecha Asignación</th>
+                            <th class="col-estado">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in asignaciones %}
+                        <tr>
+                            <td class="col-persona"><strong>{{ a.UsuarioADNombre or '-' }}</strong></td>
+                            <td class="col-correo">{{ a.UsuarioADEmail or '-' }}</td>
+                            <td class="col-oficina">{{ a.NombreOficina or '-' }}</td>
+                            <td class="col-producto">{{ a.NombreProducto or '-' }}</td>
+                            <td class="col-codigo text-center">{{ a.CodigoUnico or '-' }}</td>
+                            <td class="col-categoria">{{ a.Categoria or '-' }}</td>
+                            <td class="col-modelo">{{ a.Modelo or '-' }}</td>
+                            <td class="col-serial">{{ a.Serial or '-' }}</td>
+                            <td class="col-cantidad text-center">{{ a.Cantidad or 0 }}</td>
+                            <td class="col-valor text-end">${{ '{:,.2f}'.format(a.ValorUnitario or 0) }}</td>
+                            <td class="col-valor text-end">${{ '{:,.2f}'.format(a.ValorTotal or 0) }}</td>
+                            <td class="col-fecha">{% if a.FechaAsignacion %}{{ a.FechaAsignacion.strftime('%d/%m/%Y %H:%M') }}{% else %}-{% endif %}</td>
+                            <td class="col-estado">
+                                {% set est = (a.Estado or '').upper() %}
+                                {% if est == 'CONFIRMADO' %}
+                                <span class="badge bg-success">CONFIRMADO</span>
+                                {% elif est == 'ASIGNADO' %}
+                                <span class="badge bg-warning text-dark">ASIGNADO</span>
+                                {% elif est == 'DEVUELTO' %}
+                                <span class="badge bg-secondary">DEVUELTO</span>
+                                {% else %}
+                                <span class="badge" style="background-color: #D9D9D9; color: #4A4A4A;">{{ est or '-' }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not asignaciones %}
+                        <tr>
+                            <td colspan="13" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-2x mb-3"></i><br>
+                                No se encontraron asignaciones para los criterios actuales.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .resumen-card {
+        border-radius: 14px;
+    }
+
+    .tabla-asignaciones {
+        min-width: 1500px;
+    }
+
+    .tabla-asignaciones th,
+    .tabla-asignaciones td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        vertical-align: middle;
+        line-height: 1.15;
+    }
+
+    .tabla-asignaciones .col-persona { min-width: 180px; }
+    .tabla-asignaciones .col-correo { min-width: 240px; max-width: 260px; }
+    .tabla-asignaciones .col-oficina { min-width: 140px; }
+    .tabla-asignaciones .col-producto { min-width: 180px; }
+    .tabla-asignaciones .col-codigo { min-width: 95px; }
+    .tabla-asignaciones .col-categoria { min-width: 110px; }
+    .tabla-asignaciones .col-modelo { min-width: 130px; }
+    .tabla-asignaciones .col-serial { min-width: 130px; }
+    .tabla-asignaciones .col-cantidad { min-width: 80px; }
+    .tabla-asignaciones .col-valor { min-width: 120px; }
+    .tabla-asignaciones .col-fecha { min-width: 140px; }
+    .tabla-asignaciones .col-estado { min-width: 110px; }
+</style>
+{% endblock %}

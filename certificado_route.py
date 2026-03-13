@@ -26,11 +26,11 @@ from utils.helpers import sanitizar_log_text, sanitizar_username, sanitizar_iden
 # Crear el Blueprint
 certificado_bp = Blueprint('certificado', __name__, url_prefix='/reportes')
 
-# Colores corporativos de Quálitas
-QUALITAS_PURPLE = colors.HexColor('#7B2D8E')
-QUALITAS_CYAN = colors.HexColor('#00B2E3')
-QUALITAS_PINK = colors.HexColor('#E91E8C')
-QUALITAS_GRAY = colors.HexColor('#58595B')
+# Colores corporativos solicitados
+QUALITAS_PURPLE = colors.HexColor('#A73493')
+QUALITAS_CYAN = colors.HexColor('#0098B1')
+QUALITAS_LIGHT_GRAY = colors.HexColor('#D9D9D9')
+QUALITAS_GRAY = colors.HexColor('#4A4A4A')
 
 def add_header_footer(canvas, doc):
     """
@@ -64,12 +64,15 @@ def add_header_footer(canvas, doc):
             canvas.setFillColor(colors.white)
             canvas.setFont('Helvetica-Bold', 18)
             canvas.drawCentredString(letter[0]/2, letter[1] - 1.0*inch, "QUÁLITAS SEGUROS")
-    
-    # Línea decorativa inferior - más gruesa
+
+    # Línea decorativa inferior - doble acento
     canvas.setStrokeColor(QUALITAS_PURPLE)
-    canvas.setLineWidth(4)
-    line_y = 0.5*inch
+    canvas.setLineWidth(3)
+    line_y = 0.53*inch
     canvas.line(0.5*inch, line_y, letter[0] - 0.5*inch, line_y)
+    canvas.setStrokeColor(QUALITAS_CYAN)
+    canvas.setLineWidth(1.5)
+    canvas.line(0.5*inch, line_y - 0.08*inch, letter[0] - 0.5*inch, line_y - 0.08*inch)
     
     # Texto del pie de página
     canvas.setFont('Helvetica', 8)
@@ -110,6 +113,10 @@ def generar_certificado(asignacion_id):
             p.CodigoUnico,
             p.Descripcion,
             p.ValorUnitario,
+            p.Serial,
+            p.Modelo,
+            c.NombreCategoria AS NombreCategoria,
+            a.OficinaId,
             o.NombreOficina,
             o.Ubicacion,
             a.UsuarioADNombre,
@@ -129,6 +136,7 @@ def generar_certificado(asignacion_id):
             t.NumeroIdentificacion AS NumeroIdentificacion
         FROM Asignaciones a
         INNER JOIN ProductosCorporativos p ON a.ProductoId = p.ProductoId
+        LEFT JOIN CategoriasProductos c ON p.CategoriaId = c.CategoriaId
         LEFT JOIN Oficinas o ON a.OficinaId = o.OficinaId
         LEFT JOIN TokensConfirmacionAsignacion t ON a.AsignacionId = t.AsignacionId
         WHERE a.AsignacionId = ? 
@@ -199,9 +207,9 @@ def generar_certificado(asignacion_id):
             spaceBefore=8,
             fontName='Helvetica-Bold',
             borderWidth=0,
-            borderColor=QUALITAS_PURPLE,
-            borderPadding=4,
-            backColor=colors.HexColor('#F8F9FA')
+            borderColor=QUALITAS_CYAN,
+            borderPadding=5,
+            backColor=QUALITAS_LIGHT_GRAY
         )
         
         # Estilo para texto normal
@@ -211,7 +219,8 @@ def generar_certificado(asignacion_id):
             fontSize=10,
             alignment=TA_JUSTIFY,
             textColor=QUALITAS_GRAY,
-            leading=14
+            leading=14,
+            spaceAfter=4
         )
         
         # ========== TÍTULO PRINCIPAL ==========
@@ -234,7 +243,7 @@ def generar_certificado(asignacion_id):
         
         usuario_table = Table(usuario_data, colWidths=[2.2*inch, 4.3*inch])
         usuario_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F8F9FA')),
+            ('BACKGROUND', (0, 0), (0, -1), QUALITAS_LIGHT_GRAY),
             ('TEXTCOLOR', (0, 0), (0, -1), QUALITAS_PURPLE),
             ('TEXTCOLOR', (1, 0), (1, -1), QUALITAS_GRAY),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -243,7 +252,7 @@ def generar_certificado(asignacion_id):
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DEE2E6')),
+            ('GRID', (0, 0), (-1, -1), 0.5, QUALITAS_LIGHT_GRAY),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         
@@ -253,16 +262,30 @@ def generar_certificado(asignacion_id):
         # ========== INFORMACIÓN DEL ACTIVO ==========
         elements.append(Paragraph("INFORMACIÓN DEL ACTIVO ASIGNADO", subtitle_style))
         
+        valor_unitario = float(asignacion.get('ValorUnitario') or 0)
+        cantidad_asignada = 1
+        valor_total_asignado = valor_unitario * cantidad_asignada
+
         activo_data = [
             ['Nombre del Producto:', asignacion.get('NombreProducto', 'N/A')],
             ['Código Único:', asignacion.get('CodigoUnico', 'N/A')],
             ['Descripción:', asignacion.get('Descripcion', 'N/A') or 'Sin descripción'],
-            ['Valor Estimado:', f"${asignacion.get('ValorUnitario', 0):,.2f} COP" if asignacion.get('ValorUnitario') else 'N/A']
         ]
+
+        categoria_nombre = (asignacion.get('NombreCategoria') or '').strip().lower()
+        if categoria_nombre == 'tecnologia':
+            activo_data.append(['Modelo:', asignacion.get('Modelo', 'N/A') or 'N/A'])
+            activo_data.append(['Serial:', asignacion.get('Serial', 'N/A') or 'N/A'])
+
+        activo_data.extend([
+            ['Cantidad Asignada:', str(cantidad_asignada)],
+            ['Valor Unitario:', f"${valor_unitario:,.2f} COP" if valor_unitario else 'N/A'],
+            ['Valor Total Asignado:', f"${valor_total_asignado:,.2f} COP" if valor_total_asignado else 'N/A'],
+        ])
         
         activo_table = Table(activo_data, colWidths=[2.2*inch, 4.3*inch])
         activo_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F8F9FA')),
+            ('BACKGROUND', (0, 0), (0, -1), QUALITAS_LIGHT_GRAY),
             ('TEXTCOLOR', (0, 0), (0, -1), QUALITAS_PURPLE),
             ('TEXTCOLOR', (1, 0), (1, -1), QUALITAS_GRAY),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -271,7 +294,7 @@ def generar_certificado(asignacion_id):
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DEE2E6')),
+            ('GRID', (0, 0), (-1, -1), 0.5, QUALITAS_LIGHT_GRAY),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         
@@ -299,7 +322,7 @@ def generar_certificado(asignacion_id):
         
         asignacion_table = Table(asignacion_data, colWidths=[2.2*inch, 4.3*inch])
         asignacion_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F8F9FA')),
+            ('BACKGROUND', (0, 0), (0, -1), QUALITAS_LIGHT_GRAY),
             ('TEXTCOLOR', (0, 0), (0, -1), QUALITAS_PURPLE),
             ('TEXTCOLOR', (1, 0), (1, -1), QUALITAS_GRAY),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -308,7 +331,7 @@ def generar_certificado(asignacion_id):
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DEE2E6')),
+            ('GRID', (0, 0), (-1, -1), 0.5, QUALITAS_LIGHT_GRAY),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         
@@ -323,7 +346,7 @@ def generar_certificado(asignacion_id):
             
             obs_table = Table(obs_data, colWidths=[2.2*inch, 4.3*inch])
             obs_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F8F9FA')),
+                ('BACKGROUND', (0, 0), (0, -1), QUALITAS_LIGHT_GRAY),
                 ('TEXTCOLOR', (0, 0), (0, -1), QUALITAS_PURPLE),
                 ('TEXTCOLOR', (1, 0), (1, -1), QUALITAS_GRAY),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -332,7 +355,7 @@ def generar_certificado(asignacion_id):
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
                 ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DEE2E6')),
+                ('GRID', (0, 0), (-1, -1), 0.5, QUALITAS_LIGHT_GRAY),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ]))
             
@@ -440,7 +463,7 @@ def generar_certificado(asignacion_id):
             leading=9,
             leftIndent=20,
             rightIndent=20,
-            backColor=colors.HexColor('#F8F9FA'),
+            backColor=QUALITAS_LIGHT_GRAY,
             borderWidth=1,
             borderColor=QUALITAS_PURPLE,
             borderPadding=10

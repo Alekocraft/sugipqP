@@ -14,6 +14,7 @@ from datetime import datetime
 from functools import wraps
 import logging
 import re
+import unicodedata
 from utils.helpers import sanitizar_log_text
 
 logger = logging.getLogger(__name__)
@@ -110,6 +111,31 @@ def _calculate_inventory_stats(productos):
         'total_productos': len(productos)
     }
 
+
+
+def _normalizar_texto_comparacion(valor: str) -> str:
+    valor = unicodedata.normalize('NFKD', valor or '')
+    valor = ''.join(ch for ch in valor if not unicodedata.combining(ch))
+    return valor.strip().lower()
+
+
+def _obtener_nombre_categoria(categorias, categoria_id) -> str:
+    categoria_id_txt = str(categoria_id or '').strip()
+    for categoria in categorias or []:
+        cat_id = categoria.get('id') if isinstance(categoria, dict) else None
+        if str(cat_id) == categoria_id_txt:
+            return (categoria.get('nombre') or '').strip()
+    return ''
+
+
+def _es_categoria_tecnologia(nombre_categoria: str) -> bool:
+    return _normalizar_texto_comparacion(nombre_categoria) == 'tecnologia'
+
+
+def _categoria_requiere_serial_modelo(categorias, categoria_id) -> bool:
+    nombre_categoria = _obtener_nombre_categoria(categorias, categoria_id)
+    return _es_categoria_tecnologia(nombre_categoria)
+
 def _handle_image_upload(archivo, producto_actual=None):
     if not archivo or not archivo.filename:
         return producto_actual.get('ruta_imagen') if producto_actual else None
@@ -125,18 +151,23 @@ def _validate_product_form(categorias, proveedores):
     nombre = request.form.get('nombre', '').strip()
     categoria_id = request.form.get('categoria_id')
     proveedor_id = request.form.get('proveedor_id')
-    
+    modelo = request.form.get('modelo', '').strip()
+
     errors = []
-    
+
     if not nombre:
         errors.append('El nombre es requerido')
-    
+
     if not categoria_id:
         errors.append('La categoria es requerida')
-    
+
     if not proveedor_id:
         errors.append('El proveedor es requerido')
-    
+
+    if categoria_id and _categoria_requiere_serial_modelo(categorias, categoria_id):
+        if not modelo:
+            errors.append('El modelo es obligatorio cuando la categoria es Tecnologia')
+
     return errors
 
 @inventario_corporativo_bp.route('/')
@@ -316,7 +347,9 @@ def crear_inventario_corporativo():
                 ubicacion=request.form.get('ubicacion', ''),
                 es_asignable=1 if 'es_asignable' in request.form else 0,
                 usuario_creador=session.get('usuario', 'Sistema'),
-                ruta_imagen=ruta_imagen
+                ruta_imagen=ruta_imagen,
+                serial=None,
+                modelo=request.form.get('modelo', '').strip() or None
             )
 
             if nuevo_id:
@@ -371,7 +404,9 @@ def editar_inventario_corporativo(producto_id):
                 cantidad_minima=int(request.form.get('cantidad_minima', 0)),
                 ubicacion=request.form.get('ubicacion', producto.get('ubicacion', '')),
                 es_asignable=1 if 'es_asignable' in request.form else 0,
-                ruta_imagen=ruta_imagen
+                ruta_imagen=ruta_imagen,
+                serial=producto.get('serial'),
+                modelo=request.form.get('modelo', '').strip() or None
             )
 
             if actualizado:
@@ -445,6 +480,12 @@ def asignar_inventario_corporativo(producto_id):
             usuario_ad_email = request.form.get('usuario_ad_email', '').strip()
             raw_notif = (request.form.get('enviar_notificacion') or '').strip().lower()
             enviar_notificacion = raw_notif in ('1', 'true', 'on', 'yes', 'y', 'si')
+            serial_asignacion = (request.form.get('serial_asignacion') or '').strip()
+            requiere_serial_asignacion = _es_categoria_tecnologia(producto.get('categoria', ''))
+
+            if requiere_serial_asignacion and not serial_asignacion:
+                flash('El serial es obligatorio al asignar productos de la categoria Tecnologia.', 'danger')
+                return redirect(request.path)
 
             if cantidad_asignar > producto.get('cantidad', 0):
                 flash('No hay suficiente stock.', 'danger')
@@ -474,7 +515,8 @@ def asignar_inventario_corporativo(producto_id):
                     oficina_id=oficina_id,
                     cantidad=cantidad_asignar,
                     usuario_ad_info=usuario_ad_info,
-                    usuario_accion=session.get('usuario', 'Sistema')
+                    usuario_accion=session.get('usuario', 'Sistema'),
+                    serial_asignacion=serial_asignacion or None
                 )
                 
                 if resultado.get('success'):
@@ -483,7 +525,9 @@ def asignar_inventario_corporativo(producto_id):
                     producto_info = {
                         'nombre': producto.get('nombre', 'Producto'),
                         'codigo_unico': producto.get('codigo_unico', 'N/A'),
-                        'categoria': producto.get('categoria', 'N/A')
+                        'categoria': producto.get('categoria', 'N/A'),
+                        'serial': serial_asignacion or producto.get('serial', ''),
+                        'modelo': producto.get('modelo', '')
                     }
                     
                     if enviar_notificacion and usuario_ad_email and NOTIFICATIONS_AVAILABLE:
@@ -523,7 +567,8 @@ def asignar_inventario_corporativo(producto_id):
                     producto_id=producto_id,
                     oficina_id=oficina_id,
                     cantidad=cantidad_asignar,
-                    usuario_accion=session.get('usuario', 'Sistema')
+                    usuario_accion=session.get('usuario', 'Sistema'),
+                    serial_asignacion=serial_asignacion or None
                 )
 
                 if asignado:
@@ -541,7 +586,8 @@ def asignar_inventario_corporativo(producto_id):
         producto=producto,
         oficinas=oficinas,
         historial=historial,
-        ldap_disponible=LDAP_AVAILABLE
+        ldap_disponible=LDAP_AVAILABLE,
+        requiere_serial_asignacion=_es_categoria_tecnologia(producto.get('categoria', ''))
     )
 
 @inventario_corporativo_bp.route('/api/buscar-usuarios-ad')

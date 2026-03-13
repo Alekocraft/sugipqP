@@ -72,6 +72,18 @@
                                     </select>
                                 </div>
 
+                                <div class="row g-2 d-none" id="bloque-datos-tecnologia">
+                                    <div class="col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Modelo <span class="text-danger">*</span></label>
+                                            <input type="text" name="modelo" id="modelo" class="form-control" maxlength="150">
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-text mb-3">Para la categoría Tecnología, al crear solo se solicita el modelo. El serial se registra al momento de la asignación.</div>
+                                    </div>
+                                </div>
+
                                 <!-- Proveedor -->
                                 <div class="mb-3">
                                     <label class="form-label">Proveedor *</label>
@@ -286,6 +298,38 @@ document.addEventListener("DOMContentLoaded", function () {
         };
         reader.readAsDataURL(f);
     });
+
+
+    const categoriaSelect = document.querySelector('select[name="categoria_id"]');
+    const bloqueTecnologia = document.getElementById('bloque-datos-tecnologia');
+    const modeloInput = document.getElementById('modelo');
+
+    function normalizarTexto(valor) {
+        return (valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function categoriaRequiereDatos() {
+        if (!categoriaSelect) return false;
+        const option = categoriaSelect.options[categoriaSelect.selectedIndex];
+        const nombre = option ? option.text : '';
+        return normalizarTexto(nombre) === 'tecnologia';
+    }
+
+    function actualizarBloqueTecnologia() {
+        if (!bloqueTecnologia || !modeloInput) return;
+        const requerido = categoriaRequiereDatos();
+        bloqueTecnologia.classList.toggle('d-none', !requerido);
+        modeloInput.required = requerido;
+    }
+
+    if (categoriaSelect) {
+        categoriaSelect.addEventListener('change', actualizarBloqueTecnologia);
+        actualizarBloqueTecnologia();
+    }
 });
 
 /* ============================
